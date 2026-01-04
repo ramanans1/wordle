@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -650,6 +651,8 @@ fun StatsScreen(entries: List<GameHistoryEntry>, onBack: () -> Unit) {
         entries.count { it.guesses.size == guessCount }
     }
     val maxCount = histogram.values.maxOrNull()?.coerceAtLeast(1) ?: 1
+    val minCount = histogram.values.minOrNull() ?: 0
+    val minMaxSame = maxCount == minCount
 
     Column(
         modifier = Modifier
@@ -657,50 +660,70 @@ fun StatsScreen(entries: List<GameHistoryEntry>, onBack: () -> Unit) {
             .padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        StatRow(label = "Games played", value = total.toString())
-        StatRow(label = "Win %", value = String.format("%.1f%%", winRate))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "Games Played", color = Color.White, fontWeight = FontWeight.Bold)
+                Text(text = total.toString(), color = Color.White, fontWeight = FontWeight.SemiBold)
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "Win Percentage", color = Color.White, fontWeight = FontWeight.Bold)
+                Text(text = String.format("%.1f%%", winRate), color = Color.White, fontWeight = FontWeight.SemiBold)
+            }
+        }
+
         Text(
-            text = "Guesses distribution",
+            text = "Guess Distribution",
             color = Color.White,
-            style = MaterialTheme.typography.titleSmall
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
         )
-        histogram.forEach { (guesses, count) ->
-            val weight = if (maxCount == 0) 0f else count.toFloat() / maxCount
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(28.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(text = guesses.toString(), color = Color.White, fontWeight = FontWeight.Bold)
-                Box(
+        Text(
+            text = "Number of games by guess count",
+            color = Color.LightGray,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+        val minColor = Color(0xFF0B4C2D)
+        val maxColor = Color(0xFFA7F3D0)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            histogram.forEach { (guesses, count) ->
+                val factor = if (minMaxSame) 1f else (count - minCount).toFloat() / (maxCount - minCount)
+                val barColor = lerp(minColor, maxColor, factor.coerceIn(0f, 1f))
+                Row(
                     modifier = Modifier
-                        .weight(weight.coerceAtLeast(0.05f))
-                        .fillMaxHeight()
-                        .background(Color(0xFF38BDF8), shape = RoundedCornerShape(6.dp)),
-                    contentAlignment = Alignment.CenterStart
+                        .fillMaxWidth()
+                        .height(28.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = count.toString(),
-                        color = Color(0xFF0F172A),
-                        modifier = Modifier.padding(start = 6.dp),
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text(text = guesses.toString(), color = Color.White, fontWeight = FontWeight.Bold)
+                    val barFraction = (count.toFloat() / maxCount).coerceIn(0.05f, 1f)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(barFraction)
+                            .fillMaxHeight()
+                            .background(barColor, shape = RoundedCornerShape(6.dp)),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Text(
+                            text = count.toString(),
+                            color = if (factor > 0.5f) Color(0xFF0F172A) else Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(start = 6.dp)
+                        )
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun StatRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(text = label, color = Color.White, fontWeight = FontWeight.SemiBold)
-        Text(text = value, color = Color.White)
     }
 }
 
