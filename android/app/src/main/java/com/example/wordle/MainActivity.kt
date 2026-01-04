@@ -74,7 +74,8 @@ import kotlin.random.Random
 
 private const val MAX_GUESSES = 6
 private const val WORD_LENGTH = 5
-private const val WORDLIST_ASSET = "clean_five_letter_words.txt"
+private const val ANSWERS_ASSET = "allowed-answers.txt"
+private const val GUESSES_ASSET = "allowed-guesses.txt"
 
 private val CorrectColor = Color(0xFF22C55E)
 private val PresentColor = Color(0xFFF59E0B)
@@ -175,16 +176,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(isLoading = true)
         viewModelScope.launch {
             val loaded = withContext(Dispatchers.IO) {
-                runCatching { readWordsFromAssets() }.getOrElse { fallbackWords }
+                runCatching { readWordsFromAssets() }.getOrElse { fallbackWords to fallbackWords }
             }
-            wordList = loaded
-            answerList = loaded
-                .filter { isAnswerCandidate(it) }
-                .sortedByDescending { scoreWord(it) }
-                .take(answerPoolSize)
-                .ifEmpty { loaded }
+            wordList = loaded.first.ifEmpty { fallbackWords }
+            answerList = loaded.second.ifEmpty { fallbackWords }
+            wordSet = (wordList + answerList).toSet()
             answerSequence = answerList.shuffled(random).ifEmpty { fallbackWords }
-            wordSet = loaded.toSet()
             if (answerSequence.isNotEmpty()) {
                 answerIndex %= answerSequence.size
             }
@@ -193,38 +190,25 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun readWordsFromAssets(): List<String> {
+    private fun readWordsFromAssets(): Pair<List<String>, List<String>> {
         val assetManager = getApplication<Application>().assets
-        val words = mutableListOf<String>()
-        assetManager.open(WORDLIST_ASSET).bufferedReader().use { reader ->
-            reader.forEachLine { line ->
-                val word = line.trim().lowercase()
-                if (word.length == WORD_LENGTH &&
-                    word.all { it.isLetter() } &&
-                    word.any { it in "aeiou" } &&
-                    !(word.endsWith("s") && !word.endsWith("ss"))
-                ) {
-                    words.add(word)
+        fun readFile(name: String): List<String> {
+            val list = mutableListOf<String>()
+            runCatching {
+                assetManager.open(name).bufferedReader().useLines { lines ->
+                    lines.forEach { line ->
+                        val word = line.trim().lowercase()
+                        if (word.length == WORD_LENGTH && word.all { it.isLetter() }) {
+                            list.add(word)
+                        }
+                    }
                 }
             }
+            return list
         }
-        return words.ifEmpty { fallbackWords }
-    }
-
-    private fun isAnswerCandidate(word: String): Boolean {
-        return word.length == WORD_LENGTH &&
-            word.all { it.isLetter() } &&
-            word.any { it in "aeiou" } &&
-            !(word.endsWith("s") && !word.endsWith("ss")) &&
-            rareDoubles.none { word.contains(it) } &&
-            word.toSet().size >= 4
-    }
-
-    private fun scoreWord(word: String): Float {
-        val uniques = word.toSet()
-        val duplicatePenalty = (word.length - uniques.size) * 2f
-        val base = uniques.sumOf { letterFrequency[it]?.toDouble() ?: 0.0 }.toFloat()
-        return base - duplicatePenalty
+        val answers = readFile(ANSWERS_ASSET)
+        val guesses = readFile(GUESSES_ASSET)
+        return guesses to answers
     }
 
     fun onInputChanged(value: String) {
