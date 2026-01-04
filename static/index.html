@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Python Wordle</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Wordle (Python)</h1>
+      <p>Local Wordle implementation backed by a tiny Python server.</p>
+    </header>
+
+    <section class="controls">
+      <input id="guess-input" type="text" maxlength="5" placeholder="Enter 5-letter word" autocomplete="off" />
+      <button id="submit-guess">Submit Guess</button>
+      <button id="new-game">New Game</button>
+    </section>
+
+    <div id="message" class="message"></div>
+
+    <section>
+      <div class="play-area">
+        <div id="board" class="board"></div>
+        <div class="keyboard-wrapper">
+          <h3>Keyboard</h3>
+          <div id="keyboard" class="keyboard"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="legend">
+      <div class="legend-item"><span class="tile correct">A</span> correct spot</div>
+      <div class="legend-item"><span class="tile present">A</span> present elsewhere</div>
+      <div class="legend-item"><span class="tile absent">A</span> not in word</div>
+    </section>
+
+    <footer>
+      <p>This UI talks to <code>server.py</code>. Start it with <code>python server.py</code> then visit <a href="http://localhost:8000">localhost:8000</a>.</p>
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
