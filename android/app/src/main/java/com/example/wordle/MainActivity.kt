@@ -4,11 +4,17 @@ import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -29,6 +36,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -40,9 +49,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.wordle.R
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewModelScope
@@ -68,6 +80,26 @@ private val CorrectColor = Color(0xFF22C55E)
 private val PresentColor = Color(0xFFF59E0B)
 private val AbsentColor = Color(0xFF1F2937)
 private val UnusedColor = Color(0xFF111827)
+private val FrauncesFont = FontFamily(Font(R.font.fraunces_variable))
+private val AppTypography = Typography().let { base ->
+    base.copy(
+        displayLarge = base.displayLarge.copy(fontFamily = FrauncesFont),
+        displayMedium = base.displayMedium.copy(fontFamily = FrauncesFont),
+        displaySmall = base.displaySmall.copy(fontFamily = FrauncesFont),
+        headlineLarge = base.headlineLarge.copy(fontFamily = FrauncesFont),
+        headlineMedium = base.headlineMedium.copy(fontFamily = FrauncesFont),
+        headlineSmall = base.headlineSmall.copy(fontFamily = FrauncesFont),
+        titleLarge = base.titleLarge.copy(fontFamily = FrauncesFont),
+        titleMedium = base.titleMedium.copy(fontFamily = FrauncesFont),
+        titleSmall = base.titleSmall.copy(fontFamily = FrauncesFont),
+        bodyLarge = base.bodyLarge.copy(fontFamily = FrauncesFont),
+        bodyMedium = base.bodyMedium.copy(fontFamily = FrauncesFont),
+        bodySmall = base.bodySmall.copy(fontFamily = FrauncesFont),
+        labelLarge = base.labelLarge.copy(fontFamily = FrauncesFont),
+        labelMedium = base.labelMedium.copy(fontFamily = FrauncesFont),
+        labelSmall = base.labelSmall.copy(fontFamily = FrauncesFont),
+    )
+}
 
 enum class GameStatus { IN_PROGRESS, WON, LOST }
 enum class LetterState { UNUSED, ABSENT, PRESENT, CORRECT }
@@ -129,7 +161,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var wordList: List<String> = fallbackWords
     private var answerList: List<String> = fallbackWords
     private var wordSet: Set<String> = fallbackWords.toSet()
-    private val random = Random(12345L)
+    private val prefs = application.getSharedPreferences("wordle_prefs", Context.MODE_PRIVATE)
+    private var randomSeed = prefs.getLong("random_seed", 12345L)
+    private var random = Random(randomSeed)
+    private var answerSequence: List<String> = fallbackWords
+    private var answerIndex = prefs.getInt("answer_index", 0)
 
     init {
         loadWords()
@@ -147,7 +183,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 .sortedByDescending { scoreWord(it) }
                 .take(answerPoolSize)
                 .ifEmpty { loaded }
+            answerSequence = answerList.shuffled(random).ifEmpty { fallbackWords }
             wordSet = loaded.toSet()
+            if (answerSequence.isNotEmpty()) {
+                answerIndex %= answerSequence.size
+            }
             startNewGame(clearMessage = true)
             _state.value = _state.value.copy(isLoading = false)
         }
@@ -205,7 +245,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (_state.value.status != GameStatus.IN_PROGRESS) return
         val current = _state.value.currentInput
         if (current.isEmpty()) return
-        _state.value = _state.value.copy(currentInput = current.dropLast(1))
+        val newMessage = if (_state.value.message == "Not in the word list.") null else _state.value.message
+        _state.value = _state.value.copy(
+            currentInput = current.dropLast(1),
+            message = newMessage
+        )
     }
 
     fun submitGuess() {
@@ -258,13 +302,37 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startNewGame(clearMessage: Boolean = false) {
-        answer = answerList.random(random)
+        val pool = answerSequence.ifEmpty { fallbackWords }
+        if (pool.isNotEmpty()) {
+            answerIndex %= pool.size
+            answer = pool[answerIndex]
+            answerIndex = (answerIndex + 1) % pool.size
+            prefs.edit().putInt("answer_index", answerIndex).apply()
+        } else {
+            answer = fallbackWords.random(random)
+        }
         _state.value = _state.value.copy(
             guesses = emptyList(),
             status = GameStatus.IN_PROGRESS,
             currentInput = "",
             message = if (clearMessage) null else "New game started."
         )
+    }
+
+    fun fullReset() {
+        viewModelScope.launch {
+            historyRepository.clearAll()
+            randomSeed = System.currentTimeMillis()
+            prefs.edit()
+                .putLong("random_seed", randomSeed)
+                .putInt("answer_index", 0)
+                .apply()
+            random = Random(randomSeed)
+            answerIndex = 0
+            answerSequence = if (answerList.isNotEmpty()) answerList.shuffled(random) else fallbackWords
+            startNewGame(clearMessage = true)
+            _state.value = _state.value.copy(message = "Fully reset!")
+        }
     }
 
     private fun scoreGuess(answer: String, guess: String): List<LetterState> {
@@ -294,7 +362,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            MaterialTheme(
+                typography = AppTypography
+            ) {
                 val viewModel: GameViewModel = viewModel()
                 val state by viewModel.state.collectAsState()
                 val history by viewModel.historyFlow.collectAsState(initial = emptyList())
@@ -343,7 +413,8 @@ fun AppScaffold(
         Route.HOME -> HomeScreen(
             onPlay = { navState.value = Route.GAME },
             onHistory = { navState.value = Route.HISTORY },
-            onStats = { navState.value = Route.STATS }
+            onStats = { navState.value = Route.STATS },
+            onReset = { navState.value = Route.HOME }
         )
         Route.GAME -> gameContent()
         Route.HISTORY -> HistoryScreenWrapper(
@@ -358,52 +429,141 @@ fun AppScaffold(
 }
 
 @Composable
-fun HomeScreen(onPlay: () -> Unit, onHistory: () -> Unit, onStats: () -> Unit) {
+fun HomeScreen(onPlay: () -> Unit, onHistory: () -> Unit, onStats: () -> Unit, onReset: () -> Unit) {
+    val viewModel: GameViewModel = viewModel()
+    val showConfirm = remember { mutableStateOf(false) }
+    val resetMessage = remember { mutableStateOf<String?>(null) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(modifier = Modifier.weight(1f))
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "My Wordle",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "Designed for Mr. N Sekar",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.LightGray,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            InvertibleOutlineButton(
+                label = "Play!",
+                onClick = onPlay
+            )
+            InvertibleOutlineButton(
+                label = "History",
+                onClick = onHistory
+            )
+            InvertibleOutlineButton(
+                label = "Statistics",
+                onClick = onStats
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        if (showConfirm.value) {
+            Text(
+                text = "This will erase all progress and restart the word sequence.",
+                color = Color.LightGray,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                InvertibleOutlineButton(
+                    label = "Yes",
+                    onClick = {
+                        viewModel.fullReset()
+                        onReset()
+                        showConfirm.value = false
+                        resetMessage.value = "Fully reset!"
+                    },
+                    modifier = Modifier.widthIn(min = 90.dp)
+                )
+                InvertibleOutlineButton(
+                    label = "No, go back",
+                    onClick = {
+                        showConfirm.value = false
+                    },
+                    modifier = Modifier.widthIn(min = 110.dp),
+                    borderColor = Color(0xFF9CA3AF),
+                    normalContentColor = Color(0xFF9CA3AF)
+                )
+            }
+        } else {
+            Text(
+                text = "Full Reset",
+                color = Color.Gray,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .clickable { showConfirm.value = true }
+                    .padding(top = 6.dp)
+            )
+        }
+
+        resetMessage.value?.let {
+            Text(
+                text = it,
+                color = CorrectColor,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun InvertibleOutlineButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    borderColor: Color = Color.White,
+    normalContentColor: Color = Color.White,
+    normalContainerColor: Color = Color.Transparent,
+    pressedContentColor: Color = Color.Black,
+    pressedContainerColor: Color = Color.White
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val containerColor = if (pressed) pressedContainerColor else normalContainerColor
+    val contentColor = if (pressed) pressedContentColor else normalContentColor
+
+    OutlinedButton(
+        onClick = onClick,
+        interactionSource = interactionSource,
+        border = BorderStroke(1.5.dp, borderColor),
+        shape = RoundedCornerShape(10.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        ),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+        modifier = modifier.widthIn(min = 110.dp)
+    ) {
         Text(
-            text = "My Wordle",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            textAlign = TextAlign.Center
+            text = label,
+            color = contentColor,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.5.sp
         )
-        Text(
-            text = "Offline Wordle with history",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.LightGray,
-            modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
-        )
-        Button(
-            onClick = onPlay,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp)
-        ) {
-            Text("Play")
-        }
-        Button(
-            onClick = onHistory,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8))
-        ) {
-            Text("History", color = Color(0xFF0F172A))
-        }
-        Button(
-            onClick = onStats,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F2937))
-        ) {
-            Text("Statistics", color = Color.White)
-        }
     }
 }
 
@@ -426,13 +586,15 @@ fun HistoryScreenWrapper(historyContent: @Composable () -> Unit, onBack: () -> U
         Box(modifier = Modifier.weight(1f)) {
             historyContent()
         }
-        Button(
+        InvertibleOutlineButton(
             onClick = onBack,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F2937))
-        ) {
-            Text("Back", color = Color.White)
-        }
+            label = "Back",
+            borderColor = Color(0xFF9CA3AF),
+            normalContentColor = Color(0xFF9CA3AF),
+            modifier = Modifier
+                .widthIn(min = 110.dp)
+                .align(Alignment.CenterHorizontally)
+        )
     }
 }
 
@@ -455,13 +617,15 @@ fun StatsScreenWrapper(statsContent: @Composable () -> Unit, onBack: () -> Unit)
         Box(modifier = Modifier.weight(1f)) {
             statsContent()
         }
-        Button(
+        InvertibleOutlineButton(
             onClick = onBack,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F2937))
-        ) {
-            Text("Back", color = Color.White)
-        }
+            label = "Back",
+            borderColor = Color(0xFF9CA3AF),
+            normalContentColor = Color(0xFF9CA3AF),
+            modifier = Modifier
+                .widthIn(min = 110.dp)
+                .align(Alignment.CenterHorizontally)
+        )
     }
 }
 
@@ -589,6 +753,7 @@ fun HistoryCard(entry: GameHistoryEntry) {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun HistoryCardCompact(entry: GameHistoryEntry, expanded: Boolean, onToggle: () -> Unit) {
     Column(
         modifier = Modifier
@@ -614,9 +779,10 @@ fun HistoryCardCompact(entry: GameHistoryEntry, expanded: Boolean, onToggle: () 
             )
         }
         if (expanded) {
-            Row(
+            FlowRow(
                 modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 entry.guesses.forEach { guess ->
                     Text(
@@ -647,12 +813,14 @@ fun StatsScreen(entries: List<GameHistoryEntry>, onBack: () -> Unit) {
     val total = entries.size
     val wins = entries.count { it.won }
     val winRate = (wins.toFloat() / total * 100).coerceIn(0f, 100f)
+    val winEntries = entries.filter { it.won }
     val histogram = (1..MAX_GUESSES).associateWith { guessCount ->
-        entries.count { it.guesses.size == guessCount }
+        winEntries.count { it.guesses.size == guessCount }
     }
-    val maxCount = histogram.values.maxOrNull()?.coerceAtLeast(1) ?: 1
+    val maxCount = histogram.values.maxOrNull() ?: 0
     val minCount = histogram.values.minOrNull() ?: 0
     val minMaxSame = maxCount == minCount
+    val safeMax = maxCount.coerceAtLeast(1)
 
     Column(
         modifier = Modifier
@@ -705,7 +873,7 @@ fun StatsScreen(entries: List<GameHistoryEntry>, onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(text = guesses.toString(), color = Color.White, fontWeight = FontWeight.Bold)
-                    val barFraction = (count.toFloat() / maxCount).coerceIn(0.05f, 1f)
+                    val barFraction = (count.toFloat() / safeMax).coerceIn(0.05f, 1f)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(barFraction)
@@ -765,13 +933,6 @@ fun WordleScreen(
             color = Color.White,
             textAlign = TextAlign.Center
         )
-        if (message.isNotBlank()) {
-            Text(
-                text = message,
-                color = if (state.status == GameStatus.LOST) Color(0xFFEF4444) else Color(0xFF38BDF8),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
 
         Board(
             guesses = state.guesses,
@@ -779,32 +940,58 @@ fun WordleScreen(
             currentInput = state.currentInput
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = onSubmitGuess) {
-                Text("Submit")
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(42.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (message.isNotBlank()) {
+                val messageColor = when {
+                    state.status == GameStatus.WON -> CorrectColor
+                    state.status == GameStatus.LOST -> PresentColor
+                    message.contains("Not in the word list.", ignoreCase = true) -> Color.White
+                    else -> Color.White
+                }
+                Text(
+                    text = message,
+                    color = messageColor,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
             }
-            Button(
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            InvertibleOutlineButton(
+                label = "Submit",
+                onClick = onSubmitGuess,
+                modifier = Modifier.widthIn(min = 110.dp)
+            )
+            InvertibleOutlineButton(
+                label = "New Game",
                 onClick = onNewGame,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8))
-            ) {
-                Text("New Game", color = Color(0xFF0F172A))
-            }
+                modifier = Modifier.widthIn(min = 110.dp)
+            )
         }
 
         Keyboard(
             letterStates = letterStates,
             onLetter = onKeyPress,
-            onDelete = onDelete,
-            onEnter = onSubmitGuess
+            onDelete = onDelete
         )
         Spacer(modifier = Modifier.weight(1f, fill = true))
-        Button(
+        InvertibleOutlineButton(
             onClick = onBack,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F2937))
-        ) {
-            Text("Back", color = Color.White)
-        }
+            label = "Back",
+            borderColor = Color(0xFF9CA3AF),
+            normalContentColor = Color(0xFF9CA3AF),
+            modifier = Modifier.widthIn(min = 110.dp)
+        )
     }
 }
 
@@ -856,12 +1043,10 @@ fun Tile(letter: String, state: LetterState) {
 fun Keyboard(
     letterStates: Map<Char, LetterState>,
     onLetter: (Char) -> Unit,
-    onDelete: () -> Unit,
-    onEnter: () -> Unit
+    onDelete: () -> Unit
 ) {
     val rows = listOf("QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM")
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = "Keyboard", style = MaterialTheme.typography.titleMedium, color = Color.White)
         rows.forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -880,10 +1065,9 @@ fun Keyboard(
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Key(label = "ENTER", state = LetterState.UNUSED, onClick = { onEnter() }, isWide = true)
             Key(label = "⌫", state = LetterState.UNUSED, onClick = { onDelete() }, isWide = true)
         }
     }

@@ -51,4 +51,10 @@ class HistoryRepository(private val context: Context) {
             prefs[key] = json.encodeToString(updated)
         }
     }
+
+    suspend fun clearAll() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(key)
+        }
+    }
 }
