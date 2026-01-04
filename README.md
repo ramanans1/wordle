@@ -14,7 +14,7 @@ Then open http://localhost:8000 in a browser. The UI uses `/api/new-game` to sta
 ## Notes
 
 - Six attempts to guess the five-letter answer. Colors match the classic Wordle rules: green = correct spot, yellow = present, gray = absent.
-- On startup, `server.py` looks for `wordlist/clean_five_letter_words.txt` and uses it if present. A curated Wordle-style list is already included there. Otherwise it loads five-letter alphabetic words from system dictionaries under `/usr/share/dict/*` (e.g., `words`, `web2`), filters out a small banned set of obscene terms, and falls back to a short built-in list if needed.
+- On startup, `server.py` looks for `wordlist/clean_five_letter_words.txt` and uses it if present. A curated Wordle-style list is already included there. Words are filtered to 5-letter alphabetic entries with standard vowels, no simple plurals, and a small banned set; answer selection further narrows to a 3.5k pool that favors common letters and avoids odd doubles/repeats. If the file is missing, it loads from system dictionaries and falls back to a short built-in list.
 - No external dependencies are required beyond the Python standard library.
 
 ## Android app (offline)

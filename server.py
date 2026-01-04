@@ -70,6 +70,56 @@ FALLBACK_WORDS = [
     "zebra",
 ]
 
+VOWELS = set("aeiou")
+RARE_DOUBLES = ("zz", "xx", "qq", "yy", "jj", "ww")
+LETTER_FREQUENCY = {
+    "e": 12.0,
+    "t": 9.1,
+    "a": 8.1,
+    "o": 7.7,
+    "i": 7.3,
+    "n": 7.0,
+    "s": 6.3,
+    "r": 6.0,
+    "h": 5.9,
+    "l": 4.0,
+    "d": 3.8,
+    "c": 2.7,
+    "u": 2.7,
+    "m": 2.5,
+    "w": 2.4,
+    "f": 2.2,
+    "g": 2.0,
+    "y": 2.0,
+    "p": 1.8,
+    "b": 1.5,
+    "v": 1.1,
+    "k": 0.7,
+    "j": 0.1,
+    "x": 0.1,
+    "q": 0.1,
+    "z": 0.1,
+}
+ANSWER_POOL_SIZE = 3500
+
+
+def has_standard_vowel(word: str) -> bool:
+    return any(ch in VOWELS for ch in word)
+
+
+def is_allowed_word(word: str) -> bool:
+    if len(word) != 5 or not word.isalpha() or not has_standard_vowel(word):
+        return False
+    if word.endswith("s") and not word.endswith("ss"):
+        return False
+    return True
+
+
+def score_word(word: str) -> float:
+    uniques = set(word)
+    duplicate_penalty = (len(word) - len(uniques)) * 2.0
+    return sum(LETTER_FREQUENCY.get(ch, 0.0) for ch in uniques) - duplicate_penalty
+
 
 def load_five_letter_words() -> List[str]:
     """Load 5-letter alphabetic words, preferring a curated list if present.
@@ -109,7 +159,7 @@ def load_five_letter_words() -> List[str]:
             with path.open("r", encoding="utf-8", errors="ignore") as handle:
                 for line in handle:
                     word = line.strip().lower()
-                    if len(word) == 5 and word.isalpha():
+                    if is_allowed_word(word):
                         words.add(word)
         except OSError:
             return set()
@@ -121,7 +171,7 @@ def load_five_letter_words() -> List[str]:
         curated = load_file(WORDLIST_FILE, WORDLIST_FILE.name)
         if curated:
             curated = curated - banned_words
-            print(f"Using curated list at {WORDLIST_FILE} (after filtering banned terms: {len(curated)} words).")
+            print(f"Using curated list at {WORDLIST_FILE} (filtered for vowels/banned terms: {len(curated)} words).")
             return sorted(curated)
 
     word_files = [
@@ -148,6 +198,17 @@ def load_five_letter_words() -> List[str]:
 
 WORD_LIST: List[str] = load_five_letter_words()
 WORD_SET: Set[str] = set(WORD_LIST)
+ANSWER_LIST: List[str] = [
+    word
+    for word in WORD_LIST
+    if has_standard_vowel(word)
+    and not any(dbl in word for dbl in RARE_DOUBLES)
+    and len(set(word)) >= 4
+]
+if not ANSWER_LIST:
+    ANSWER_LIST = WORD_LIST
+else:
+    ANSWER_LIST = sorted(ANSWER_LIST, key=score_word, reverse=True)[:ANSWER_POOL_SIZE]
 
 
 class GameState:
@@ -213,7 +274,7 @@ GAMES: Dict[str, GameState] = {}
 
 
 def pick_word() -> str:
-    return random.choice(WORD_LIST)
+    return random.choice(ANSWER_LIST)
 
 
 class WordleHandler(SimpleHTTPRequestHandler):

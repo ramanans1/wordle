@@ -9,30 +9,32 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,12 +45,18 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewModelScope
+import com.example.wordle.data.GameHistoryEntry
+import com.example.wordle.data.HistoryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 
 private const val MAX_GUESSES = 6
@@ -79,14 +87,48 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         "apple", "baker", "cabin", "delta", "eagle", "fancy",
         "giant", "habit", "ideal", "joker", "lemon", "magic"
     )
+    private val rareDoubles = listOf("zz", "xx", "qq", "yy", "jj", "ww")
+    private val letterFrequency = mapOf(
+        'e' to 12.0f,
+        't' to 9.1f,
+        'a' to 8.1f,
+        'o' to 7.7f,
+        'i' to 7.3f,
+        'n' to 7.0f,
+        's' to 6.3f,
+        'r' to 6.0f,
+        'h' to 5.9f,
+        'l' to 4.0f,
+        'd' to 3.8f,
+        'c' to 2.7f,
+        'u' to 2.7f,
+        'm' to 2.5f,
+        'w' to 2.4f,
+        'f' to 2.2f,
+        'g' to 2.0f,
+        'y' to 2.0f,
+        'p' to 1.8f,
+        'b' to 1.5f,
+        'v' to 1.1f,
+        'k' to 0.7f,
+        'j' to 0.1f,
+        'x' to 0.1f,
+        'q' to 0.1f,
+        'z' to 0.1f
+    )
+    private val answerPoolSize = 3500
+    private val historyRepository = HistoryRepository(application)
 
     private val _state = MutableStateFlow(GameUiState())
     val state: StateFlow<GameUiState> = _state
 
+    val historyFlow = historyRepository.historyFlow()
+
     private var answer: String = ""
     private var wordList: List<String> = fallbackWords
+    private var answerList: List<String> = fallbackWords
     private var wordSet: Set<String> = fallbackWords.toSet()
-    private val random = Random(System.currentTimeMillis())
+    private val random = Random(12345L)
 
     init {
         loadWords()
@@ -99,6 +141,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 runCatching { readWordsFromAssets() }.getOrElse { fallbackWords }
             }
             wordList = loaded
+            answerList = loaded
+                .filter { isAnswerCandidate(it) }
+                .sortedByDescending { scoreWord(it) }
+                .take(answerPoolSize)
+                .ifEmpty { loaded }
             wordSet = loaded.toSet()
             startNewGame(clearMessage = true)
             _state.value = _state.value.copy(isLoading = false)
@@ -111,12 +158,32 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         assetManager.open(WORDLIST_ASSET).bufferedReader().use { reader ->
             reader.forEachLine { line ->
                 val word = line.trim().lowercase()
-                if (word.length == WORD_LENGTH && word.all { it.isLetter() }) {
+                if (word.length == WORD_LENGTH &&
+                    word.all { it.isLetter() } &&
+                    word.any { it in "aeiou" } &&
+                    !(word.endsWith("s") && !word.endsWith("ss"))
+                ) {
                     words.add(word)
                 }
             }
         }
         return words.ifEmpty { fallbackWords }
+    }
+
+    private fun isAnswerCandidate(word: String): Boolean {
+        return word.length == WORD_LENGTH &&
+            word.all { it.isLetter() } &&
+            word.any { it in "aeiou" } &&
+            !(word.endsWith("s") && !word.endsWith("ss")) &&
+            rareDoubles.none { word.contains(it) } &&
+            word.toSet().size >= 4
+    }
+
+    private fun scoreWord(word: String): Float {
+        val uniques = word.toSet()
+        val duplicatePenalty = (word.length - uniques.size) * 2f
+        val base = uniques.sumOf { letterFrequency[it]?.toDouble() ?: 0.0 }.toFloat()
+        return base - duplicatePenalty
     }
 
     fun onInputChanged(value: String) {
@@ -174,10 +241,23 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             currentInput = "",
             message = message
         )
+
+        if (status != GameStatus.IN_PROGRESS) {
+            viewModelScope.launch {
+                historyRepository.addEntry(
+                    GameHistoryEntry(
+                        timestamp = System.currentTimeMillis(),
+                        answer = answer,
+                        won = status == GameStatus.WON,
+                        guesses = updatedGuesses.map { it.word }
+                    )
+                )
+            }
+        }
     }
 
     fun startNewGame(clearMessage: Boolean = false) {
-        answer = wordList.random(random)
+        answer = answerList.random(random)
         _state.value = _state.value.copy(
             guesses = emptyList(),
             status = GameStatus.IN_PROGRESS,
@@ -216,28 +296,423 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 val viewModel: GameViewModel = viewModel()
                 val state by viewModel.state.collectAsState()
-                WordleScreen(
-                    state = state,
-                    onInputChange = viewModel::onInputChanged,
-                    onSubmitGuess = viewModel::submitGuess,
-                    onNewGame = { viewModel.startNewGame(clearMessage = true) },
-                    onKeyPress = viewModel::onKeyInput,
-                    onDelete = viewModel::onDeleteInput
+                val history by viewModel.historyFlow.collectAsState(initial = emptyList())
+                val navState = rememberNavState()
+                AppScaffold(
+                    navState = navState,
+                    gameContent = {
+                        WordleScreen(
+                            state = state,
+                            onInputChange = viewModel::onInputChanged,
+                            onSubmitGuess = viewModel::submitGuess,
+                            onNewGame = { viewModel.startNewGame(clearMessage = true) },
+                            onKeyPress = viewModel::onKeyInput,
+                            onDelete = viewModel::onDeleteInput,
+                            onBack = { navState.value = Route.HOME }
+                        )
+                    },
+                    historyContent = {
+                        HistoryScreen(entries = history)
+                    },
+                    statsContent = {
+                        StatsScreen(entries = history, onBack = { navState.value = Route.HOME })
+                    }
                 )
             }
         }
     }
 }
 
+enum class Route { HOME, GAME, HISTORY, STATS }
+
+data class NavState(val route: Route = Route.HOME)
+
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
+fun rememberNavState(): MutableStateFlow<Route> = remember { MutableStateFlow(Route.HOME) }
+
+@Composable
+fun AppScaffold(
+    navState: MutableStateFlow<Route>,
+    gameContent: @Composable () -> Unit,
+    historyContent: @Composable () -> Unit,
+    statsContent: @Composable () -> Unit
+) {
+    val route by navState.collectAsState()
+    when (route) {
+        Route.HOME -> HomeScreen(
+            onPlay = { navState.value = Route.GAME },
+            onHistory = { navState.value = Route.HISTORY },
+            onStats = { navState.value = Route.STATS }
+        )
+        Route.GAME -> gameContent()
+        Route.HISTORY -> HistoryScreenWrapper(
+            historyContent = historyContent,
+            onBack = { navState.value = Route.HOME }
+        )
+        Route.STATS -> StatsScreenWrapper(
+            statsContent = statsContent,
+            onBack = { navState.value = Route.HOME }
+        )
+    }
+}
+
+@Composable
+fun HomeScreen(onPlay: () -> Unit, onHistory: () -> Unit, onStats: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "My Wordle",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "Offline Wordle with history",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.LightGray,
+            modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+        )
+        Button(
+            onClick = onPlay,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp)
+        ) {
+            Text("Play")
+        }
+        Button(
+            onClick = onHistory,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8))
+        ) {
+            Text("History", color = Color(0xFF0F172A))
+        }
+        Button(
+            onClick = onStats,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F2937))
+        ) {
+            Text("Statistics", color = Color.White)
+        }
+    }
+}
+
+@Composable
+fun HistoryScreenWrapper(historyContent: @Composable () -> Unit, onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "History",
+            style = MaterialTheme.typography.titleLarge,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(modifier = Modifier.weight(1f)) {
+            historyContent()
+        }
+        Button(
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F2937))
+        ) {
+            Text("Back", color = Color.White)
+        }
+    }
+}
+
+@Composable
+fun StatsScreenWrapper(statsContent: @Composable () -> Unit, onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Statistics",
+            style = MaterialTheme.typography.titleLarge,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(modifier = Modifier.weight(1f)) {
+            statsContent()
+        }
+        Button(
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F2937))
+        ) {
+            Text("Back", color = Color.White)
+        }
+    }
+}
+
+@Composable
+fun HistoryScreen(entries: List<GameHistoryEntry>) {
+    val formatter = DateTimeFormatter.ISO_LOCAL_DATE
+    val today = remember { LocalDate.now() }
+    val displayedMonthState = remember { mutableStateOf(YearMonth.from(today)) }
+    val selectedDateState = remember { mutableStateOf(today) }
+    val expandedEntryId = remember { mutableStateOf<Long?>(null) }
+    val entriesByDate = remember(entries) {
+        entries.groupBy { LocalDate.parse(it.dateString, formatter) }
+    }
+    val selectedEntries = entriesByDate[selectedDateState.value].orEmpty()
+    val currentMonth = displayedMonthState.value
+    val firstDayOfMonth = currentMonth.atDay(1)
+    val daysInMonth = currentMonth.lengthOfMonth()
+    val leadingBlanks = (firstDayOfMonth.dayOfWeek.value % 7)
+    val days = (1..daysInMonth).map { day -> currentMonth.atDay(day) }
+    val gridItems: List<LocalDate?> = List(leadingBlanks) { null } + days
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "‹",
+                color = Color.White,
+                modifier = Modifier
+                    .clickable {
+                        displayedMonthState.value = displayedMonthState.value.minusMonths(1)
+                        selectedDateState.value = displayedMonthState.value.atDay(1)
+                    }
+                    .padding(8.dp),
+                fontSize = 20.sp
+            )
+            Text(
+                text = currentMonth.month.name.lowercase()
+                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() } + " ${currentMonth.year}",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = "›",
+                color = Color.White,
+                modifier = Modifier
+                    .clickable {
+                        displayedMonthState.value = displayedMonthState.value.plusMonths(1)
+                        selectedDateState.value = displayedMonthState.value.atDay(1)
+                    }
+                    .padding(8.dp),
+                fontSize = 20.sp
+            )
+        }
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(7),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(4.dp)
+        ) {
+            items(gridItems) { date ->
+                if (date == null) {
+                    Box(modifier = Modifier.size(36.dp))
+                } else {
+                    val hasGames = entriesByDate.containsKey(date)
+                    val isSelected = date == selectedDateState.value
+                    val bg = when {
+                        isSelected -> Color(0xFF38BDF8)
+                        hasGames -> CorrectColor
+                        else -> Color(0xFF1F2937)
+                    }
+                    val textColor = if (hasGames || isSelected) Color(0xFF0F172A) else Color.White
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(bg, shape = RoundedCornerShape(6.dp))
+                            .clickable { selectedDateState.value = date },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = date.dayOfMonth.toString(), color = textColor, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        Text(
+            text = "Games on ${selectedDateState.value.format(formatter)}",
+            color = Color.White,
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        if (selectedEntries.isEmpty()) {
+            Text(text = "No games played.", color = Color.LightGray)
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                items(selectedEntries) { entry ->
+                    HistoryCardCompact(
+                        entry = entry,
+                        expanded = expandedEntryId.value == entry.timestamp,
+                        onToggle = {
+                            expandedEntryId.value = if (expandedEntryId.value == entry.timestamp) null else entry.timestamp
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HistoryCard(entry: GameHistoryEntry) {
+    HistoryCardCompact(entry = entry, expanded = true, onToggle = {})
+}
+
+@Composable
+fun HistoryCardCompact(entry: GameHistoryEntry, expanded: Boolean, onToggle: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF0F172A), shape = RoundedCornerShape(10.dp))
+            .clickable { onToggle() }
+            .padding(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = entry.answer.uppercase(),
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (entry.won) "Won" else "Lost",
+                color = if (entry.won) CorrectColor else Color(0xFFEF4444),
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        if (expanded) {
+            Row(
+                modifier = Modifier.padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                entry.guesses.forEach { guess ->
+                    Text(
+                        text = guess.uppercase(),
+                        color = Color.White,
+                        modifier = Modifier
+                            .background(Color(0xFF1F2937), shape = RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatsScreen(entries: List<GameHistoryEntry>, onBack: () -> Unit) {
+    if (entries.isEmpty()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(text = "No games yet.", color = Color.LightGray)
+        }
+        return
+    }
+    val total = entries.size
+    val wins = entries.count { it.won }
+    val winRate = (wins.toFloat() / total * 100).coerceIn(0f, 100f)
+    val histogram = (1..MAX_GUESSES).associateWith { guessCount ->
+        entries.count { it.guesses.size == guessCount }
+    }
+    val maxCount = histogram.values.maxOrNull()?.coerceAtLeast(1) ?: 1
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        StatRow(label = "Games played", value = total.toString())
+        StatRow(label = "Win %", value = String.format("%.1f%%", winRate))
+        Text(
+            text = "Guesses distribution",
+            color = Color.White,
+            style = MaterialTheme.typography.titleSmall
+        )
+        histogram.forEach { (guesses, count) ->
+            val weight = if (maxCount == 0) 0f else count.toFloat() / maxCount
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(28.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(text = guesses.toString(), color = Color.White, fontWeight = FontWeight.Bold)
+                Box(
+                    modifier = Modifier
+                        .weight(weight.coerceAtLeast(0.05f))
+                        .fillMaxHeight()
+                        .background(Color(0xFF38BDF8), shape = RoundedCornerShape(6.dp)),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        text = count.toString(),
+                        color = Color(0xFF0F172A),
+                        modifier = Modifier.padding(start = 6.dp),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, color = Color.White, fontWeight = FontWeight.SemiBold)
+        Text(text = value, color = Color.White)
+    }
+}
+
+@Composable
 fun WordleScreen(
     state: GameUiState,
     onInputChange: (String) -> Unit,
     onSubmitGuess: () -> Unit,
     onNewGame: () -> Unit,
     onKeyPress: (Char) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onBack: () -> Unit
 ) {
     if (state.isLoading) {
         Box(
@@ -257,12 +732,15 @@ fun WordleScreen(
             .fillMaxSize()
             .background(Color.Black)
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Wordle (Offline)",
+            text = "My Wordle",
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            textAlign = TextAlign.Center
         )
         if (message.isNotBlank()) {
             Text(
@@ -272,38 +750,21 @@ fun WordleScreen(
             )
         }
 
-        Board(guesses = state.guesses, maxRows = state.maxGuesses)
+        Board(
+            guesses = state.guesses,
+            maxRows = state.maxGuesses,
+            currentInput = state.currentInput
+        )
 
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedTextField(
-                value = state.currentInput.uppercase(),
-                onValueChange = onInputChange,
-                label = { Text("Enter guess") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFF0F172A),
-                    unfocusedContainerColor = Color(0xFF0F172A),
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    cursorColor = Color.White,
-                    focusedLabelColor = Color(0xFF38BDF8),
-                    unfocusedLabelColor = Color(0xFF9CA3AF)
-                )
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onSubmitGuess, modifier = Modifier.weight(1f)) {
-                    Text("Submit")
-                }
-                Button(
-                    onClick = onNewGame,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("New Game", color = Color(0xFF0F172A))
-                }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onSubmitGuess) {
+                Text("Submit")
+            }
+            Button(
+                onClick = onNewGame,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8))
+            ) {
+                Text("New Game", color = Color(0xFF0F172A))
             }
         }
 
@@ -313,17 +774,29 @@ fun WordleScreen(
             onDelete = onDelete,
             onEnter = onSubmitGuess
         )
+        Spacer(modifier = Modifier.weight(1f, fill = true))
+        Button(
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F2937))
+        ) {
+            Text("Back", color = Color.White)
+        }
     }
 }
 
 @Composable
-fun Board(guesses: List<Guess>, maxRows: Int) {
+fun Board(guesses: List<Guess>, maxRows: Int, currentInput: String) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         repeat(maxRows) { rowIndex ->
             val guess = guesses.getOrNull(rowIndex)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 repeat(WORD_LENGTH) { col ->
-                    val letter = guess?.word?.getOrNull(col)?.uppercase() ?: ""
+                    val letter = when {
+                        guess != null -> guess.word.getOrNull(col)?.uppercase() ?: ""
+                        rowIndex == guesses.size -> currentInput.getOrNull(col)?.uppercase() ?: ""
+                        else -> ""
+                    }
                     val state = guess?.results?.getOrNull(col) ?: LetterState.UNUSED
                     Tile(letter = letter, state = state)
                 }
@@ -367,7 +840,11 @@ fun Keyboard(
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(text = "Keyboard", style = MaterialTheme.typography.titleMedium, color = Color.White)
         rows.forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 row.forEach { letter ->
                     val state = letterStates[letter.lowercaseChar()] ?: LetterState.UNUSED
                     Key(
@@ -378,7 +855,11 @@ fun Keyboard(
                 }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Key(label = "ENTER", state = LetterState.UNUSED, onClick = { onEnter() }, isWide = true)
             Key(label = "⌫", state = LetterState.UNUSED, onClick = { onDelete() }, isWide = true)
         }

@@ -1,0 +1,13 @@
+# Python
+.pycache/
+__pycache__/
+*.pyc
+
+# Android/Gradle
+android/.gradle/
+android/app/build/
+android/local.properties
+
+# IDE
+.idea/
+.DS_Store
