@@ -6,6 +6,9 @@ __pycache__/
 # Android/Gradle
 android/.gradle/
 android/app/build/
+android/build/
+android/app/.cxx/
+android/app/**/*.apk
 android/local.properties
 
 # IDE
