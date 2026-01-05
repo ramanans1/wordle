@@ -7,10 +7,8 @@ abhor
 abide
 abled
 abode
-abort
 about
 above
-abuse
 abyss
 acorn
 acrid
@@ -25,7 +23,6 @@ adobe
 adopt
 adore
 adorn
-adult
 affix
 afire
 afoot
@@ -109,7 +106,6 @@ aroma
 arose
 array
 arrow
-arson
 artsy
 ascot
 ashen
@@ -192,7 +188,6 @@ bezel
 bible
 bicep
 biddy
-bigot
 bilge
 billy
 binge
@@ -225,7 +220,6 @@ bloat
 block
 bloke
 blond
-blood
 bloom
 blown
 bluer
@@ -244,11 +238,8 @@ booby
 boost
 booth
 booty
-booze
-boozy
 borax
 borne
-bosom
 bossy
 botch
 bough
@@ -271,7 +262,6 @@ bread
 break
 breed
 briar
-bribe
 brick
 bride
 brief
@@ -307,7 +297,6 @@ burnt
 burst
 bused
 bushy
-butch
 butte
 buxom
 buyer
@@ -479,7 +468,6 @@ crest
 crick
 cried
 crier
-crime
 crimp
 crisp
 croak
@@ -520,7 +508,6 @@ dandy
 datum
 daunt
 dealt
-death
 debar
 debit
 debug
@@ -544,7 +531,6 @@ depot
 depth
 derby
 deter
-detox
 deuce
 devil
 diary
@@ -594,7 +580,6 @@ dried
 drier
 drift
 drill
-drink
 drive
 droit
 droll
@@ -605,12 +590,10 @@ dross
 drove
 drown
 druid
-drunk
 dryer
 dryly
 duchy
 dully
-dummy
 dumpy
 dunce
 dusky
@@ -711,7 +694,6 @@ feast
 fecal
 feign
 fella
-felon
 femme
 femur
 fence
@@ -801,7 +783,6 @@ foyer
 frail
 frame
 frank
-fraud
 freak
 freed
 freer
@@ -853,7 +834,6 @@ ghost
 ghoul
 giant
 giddy
-gipsy
 girly
 girth
 given
@@ -971,7 +951,6 @@ heave
 heavy
 hedge
 hefty
-heist
 helix
 hello
 hence
@@ -1017,7 +996,6 @@ icily
 icing
 ideal
 idiom
-idiot
 idler
 idyll
 igloo
@@ -1081,7 +1059,6 @@ knead
 kneed
 kneel
 knelt
-knife
 knock
 knoll
 known
@@ -1153,7 +1130,6 @@ login
 loopy
 loose
 lorry
-loser
 louse
 lousy
 lover
@@ -1173,7 +1149,6 @@ lurid
 lusty
 lying
 lymph
-lynch
 lyric
 macaw
 macho
@@ -1253,7 +1228,6 @@ month
 moody
 moose
 moral
-moron
 morph
 mossy
 motel
@@ -1588,7 +1562,6 @@ rhino
 rhyme
 rider
 ridge
-rifle
 right
 rigid
 rigor
@@ -1810,8 +1783,6 @@ smirk
 smite
 smith
 smock
-smoke
-smoky
 smote
 snack
 snail
@@ -2042,7 +2013,6 @@ there
 these
 theta
 thick
-thief
 thigh
 thing
 think
@@ -2089,8 +2059,6 @@ touch
 tough
 towel
 tower
-toxic
-toxin
 trace
 track
 tract
@@ -2189,7 +2157,6 @@ vapor
 vault
 vaunt
 vegan
-venom
 venue
 verge
 verse
@@ -2216,7 +2183,6 @@ vodka
 vogue
 voice
 voila
-vomit
 voter
 vouch
 vowel

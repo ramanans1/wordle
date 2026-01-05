@@ -5,11 +5,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import android.content.Context
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +28,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -42,18 +46,23 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import com.example.wordle.R
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -65,6 +74,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import java.io.BufferedReader
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -81,6 +91,12 @@ private val CorrectColor = Color(0xFF22C55E)
 private val PresentColor = Color(0xFFF59E0B)
 private val AbsentColor = Color(0xFF1F2937)
 private val UnusedColor = Color(0xFF111827)
+private val BlockedAnswers = setOf(
+    "abuse","abort","adult","arson","bigot","blood","bosom","booze","boozy","bribe",
+    "butch","crime","death","detox","drink","drunk","dummy","felon","fraud","gipsy",
+    "heist","idiot","kinky","knife","loser","lynch","moron","rifle","smoke","smoky","thief",
+    "toxic","toxin","venom","vomit"
+)
 private val FrauncesFont = FontFamily(Font(R.font.fraunces_variable))
 private val AppTypography = Typography().let { base ->
     base.copy(
@@ -178,8 +194,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val loaded = withContext(Dispatchers.IO) {
                 runCatching { readWordsFromAssets() }.getOrElse { fallbackWords to fallbackWords }
             }
-            wordList = loaded.first.ifEmpty { fallbackWords }
-            answerList = loaded.second.ifEmpty { fallbackWords }
+            wordList = loaded.first.filterNot { it in BlockedAnswers }.ifEmpty { fallbackWords }
+            answerList = loaded.second.filterNot { it in BlockedAnswers }.ifEmpty { fallbackWords }
             wordSet = (wordList + answerList).toSet()
             answerSequence = answerList.shuffled(random).ifEmpty { fallbackWords }
             if (answerSequence.isNotEmpty()) {
@@ -349,6 +365,11 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(
                 typography = AppTypography
             ) {
+                val showSplash = remember { mutableStateOf(true) }
+                LaunchedEffect(Unit) {
+                    delay(2000)
+                    showSplash.value = false
+                }
                 val viewModel: GameViewModel = viewModel()
                 val state by viewModel.state.collectAsState()
                 val history by viewModel.historyFlow.collectAsState(initial = emptyList())
@@ -373,6 +394,21 @@ class MainActivity : ComponentActivity() {
                         StatsScreen(entries = history, onBack = { navState.value = Route.HOME })
                     }
                 )
+                if (showSplash.value) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.splash_logo),
+                            contentDescription = "Splash",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
             }
         }
     }
@@ -906,7 +942,8 @@ fun WordleScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -968,7 +1005,6 @@ fun WordleScreen(
             onLetter = onKeyPress,
             onDelete = onDelete
         )
-        Spacer(modifier = Modifier.weight(1f, fill = true))
         InvertibleOutlineButton(
             onClick = onBack,
             label = "Back",
@@ -981,6 +1017,8 @@ fun WordleScreen(
 
 @Composable
 fun Board(guesses: List<Guess>, maxRows: Int, currentInput: String) {
+    val screen = LocalConfiguration.current
+    val sizeDp = (minOf(screen.screenWidthDp, screen.screenHeightDp) * 0.11f).dp.coerceIn(42.dp, 64.dp)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         repeat(maxRows) { rowIndex ->
             val guess = guesses.getOrNull(rowIndex)
@@ -992,7 +1030,7 @@ fun Board(guesses: List<Guess>, maxRows: Int, currentInput: String) {
                         else -> ""
                     }
                     val state = guess?.results?.getOrNull(col) ?: LetterState.UNUSED
-                    Tile(letter = letter, state = state)
+                    Tile(letter = letter, state = state, size = sizeDp)
                 }
             }
         }
@@ -1000,7 +1038,7 @@ fun Board(guesses: List<Guess>, maxRows: Int, currentInput: String) {
 }
 
 @Composable
-fun Tile(letter: String, state: LetterState) {
+fun Tile(letter: String, state: LetterState, size: Dp = 54.dp) {
     val colors = when (state) {
         LetterState.CORRECT -> CorrectColor
         LetterState.PRESENT -> PresentColor
@@ -1009,7 +1047,7 @@ fun Tile(letter: String, state: LetterState) {
     }
     Box(
         modifier = Modifier
-            .size(54.dp)
+            .size(size)
             .background(color = colors, shape = RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center
     ) {
