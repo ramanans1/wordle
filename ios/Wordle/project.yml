@@ -1,0 +1,16 @@
+name: Wordle
+targets:
+  Wordle:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - Wordle
+    resources:
+      - Wordle/Resources
+      - Wordle/Resources/*.ttf
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.wordleios
+        SWIFT_VERSION: 5.9
+        INFOPLIST_FILE: Wordle/Info.plist
