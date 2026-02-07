@@ -5,6 +5,26 @@ private let presentColor = Color(red: 0xF5/255, green: 0x9E/255, blue: 0x0B/255)
 private let absentColor = Color(red: 0x1F/255, green: 0x29/255, blue: 0x37/255)
 private let unusedColor = Color(red: 0x11/255, green: 0x18/255, blue: 0x27/255)
 
+private let appFontRegularName = "Fraunces_72pt-Regular"
+private let appFontSemiBoldName = "Fraunces_72pt-SemiBold"
+private let appFontBoldName = "Fraunces_72pt-Bold"
+private let appFontBlackName = "Fraunces_72pt-Black"
+
+private func appFont(_ name: String, _ size: CGFloat) -> Font {
+    .custom(name, size: size)
+}
+
+private let appSplashFont = appFont(appFontBlackName, 42)
+private let appTitleFont = appFont(appFontBlackName, 36)
+private let appPageTitleFont = appFont(appFontBoldName, 30)
+private let appSectionTitleFont = appFont(appFontBoldName, 24)
+private let appBodyFont = appFont(appFontRegularName, 16)
+private let appBodyBoldFont = appFont(appFontSemiBoldName, 16)
+private let appCaptionFont = appFont(appFontRegularName, 12)
+private let appCaptionBoldFont = appFont(appFontSemiBoldName, 12)
+private let appTileFont = appFont(appFontBlackName, 20)
+private let appKeyboardFont = appFont(appFontBoldName, 16)
+
 struct RootView: View {
     @StateObject var viewModel = GameViewModel()
     @State private var route: AppRoute = .home
@@ -43,7 +63,7 @@ struct SplashView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             Text("My Wordle")
-                .font(.system(size: 42, weight: .bold, design: .serif))
+                .font(appSplashFont)
                 .foregroundColor(.white)
         }
     }
@@ -64,10 +84,10 @@ struct HomeScreen: View {
             Spacer()
             VStack(spacing: 12) {
                 Text("My Wordle")
-                    .font(.system(size: 36, weight: .bold, design: .serif))
+                    .font(appTitleFont)
                     .foregroundColor(.white)
                 Text("Designed for Mr. N Sekar")
-                    .font(.subheadline)
+                    .font(appBodyFont)
                     .foregroundColor(.gray)
                 InvertibleOutlineButton(label: "Play!", action: onPlay)
                 InvertibleOutlineButton(label: "History", action: onHistory)
@@ -77,7 +97,7 @@ struct HomeScreen: View {
 
             if showConfirm {
                 Text("This will erase all progress and restart the word sequence.")
-                    .font(.caption)
+                    .font(appCaptionFont)
                     .foregroundColor(.gray)
                     .multilineTextAlignment(.center)
                 HStack(spacing: 10) {
@@ -92,12 +112,12 @@ struct HomeScreen: View {
             } else {
                 Text("Full Reset")
                     .foregroundColor(.gray)
-                    .fontWeight(.semibold)
+                    .font(appBodyBoldFont)
                     .onTapGesture { showConfirm = true }
             }
 
             if let resetMessage {
-                Text(resetMessage).foregroundColor(correctColor).fontWeight(.bold)
+                Text(resetMessage).foregroundColor(correctColor).font(appBodyBoldFont)
             }
         }
         .padding(24)
@@ -115,7 +135,7 @@ struct WordleScreen: View {
         } else {
             ScrollView {
                 VStack(spacing: 12) {
-                    Text("My Wordle").font(.system(size: 30, weight: .bold, design: .serif)).foregroundColor(.white)
+                    Text("My Wordle").font(appPageTitleFont).foregroundColor(.white)
 
                     BoardView(guesses: viewModel.state.guesses, maxRows: viewModel.state.maxGuesses, currentInput: viewModel.state.currentInput)
 
@@ -124,7 +144,7 @@ struct WordleScreen: View {
                         if let message = viewModel.state.message, !message.isEmpty {
                             Text(message)
                                 .foregroundColor(viewModel.state.status == .won ? correctColor : (viewModel.state.status == .lost ? presentColor : .white))
-                                .fontWeight(.bold)
+                                .font(appBodyBoldFont)
                                 .multilineTextAlignment(.center)
                         }
                     }
@@ -179,7 +199,7 @@ struct TileView: View {
         RoundedRectangle(cornerRadius: 8)
             .fill(color)
             .frame(width: size, height: size)
-            .overlay(Text(letter).font(.system(size: 20, weight: .heavy)).foregroundColor(textColor))
+            .overlay(Text(letter).font(appTileFont).foregroundColor(textColor))
     }
 
     private var color: Color {
@@ -192,7 +212,7 @@ struct TileView: View {
     }
 
     private var textColor: Color {
-        (state == .unused || state == .absent) ? .white : Color(red: 0x0F/255, green: 0x17/255, blue: 0x2A/255)
+        (state == .unused || state == .absent) ? Color.white : Color(red: 0x0F/255, green: 0x17/255, blue: 0x2A/255)
     }
 }
 
@@ -228,7 +248,7 @@ struct KeyView: View {
             RoundedRectangle(cornerRadius: 6)
                 .fill(background)
                 .frame(width: width, height: 40)
-                .overlay(Text(label).fontWeight(.bold).foregroundColor(text))
+                .overlay(Text(label).font(appKeyboardFont).foregroundColor(text))
         }
         .buttonStyle(.plain)
     }
@@ -257,7 +277,7 @@ struct HistoryWrapper: View {
 
     var body: some View {
         VStack {
-            Text("History").font(.title2.bold()).foregroundColor(.white)
+            Text("History").font(appSectionTitleFont).foregroundColor(.white)
             HistoryScreen(entries: viewModel.history)
             InvertibleOutlineButton(label: "Back", action: onBack, borderColor: .gray)
         }
@@ -279,14 +299,14 @@ struct HistoryScreen: View {
 
         VStack(alignment: .leading) {
             HStack {
-                Text("‹").foregroundColor(.white).padding(8).onTapGesture {
+                Text("‹").foregroundColor(.white).font(appBodyBoldFont).padding(8).onTapGesture {
                     displayedMonth = displayedMonth.previous
                     selectedDate = displayedMonth.firstDate
                 }
                 Spacer()
-                Text(displayedMonth.title).foregroundColor(.white)
+                Text(displayedMonth.title).foregroundColor(.white).font(appBodyBoldFont)
                 Spacer()
-                Text("›").foregroundColor(.white).padding(8).onTapGesture {
+                Text("›").foregroundColor(.white).font(appBodyBoldFont).padding(8).onTapGesture {
                     displayedMonth = displayedMonth.next
                     selectedDate = displayedMonth.firstDate
                 }
@@ -299,11 +319,11 @@ struct HistoryScreen: View {
                         let hasGames = entriesByDate[key] != nil
                         let isSelected = Calendar.current.isDate(date, inSameDayAs: selectedDate)
                         let bg = isSelected ? Color(red: 0x38/255, green: 0xBD/255, blue: 0xF8/255) : (hasGames ? correctColor : absentColor)
-                        let fg = (hasGames || isSelected) ? Color(red: 0x0F/255, green: 0x17/255, blue: 0x2A/255) : .white
+                        let fg = (hasGames || isSelected) ? Color(red: 0x0F/255, green: 0x17/255, blue: 0x2A/255) : Color.white
                         RoundedRectangle(cornerRadius: 6)
                             .fill(bg)
                             .frame(width: 36, height: 36)
-                            .overlay(Text("\(Calendar.current.component(.day, from: date))").foregroundColor(fg).fontWeight(.bold))
+                            .overlay(Text("\(Calendar.current.component(.day, from: date))").foregroundColor(fg).font(appCaptionBoldFont))
                             .onTapGesture { selectedDate = date }
                     } else {
                         Color.clear.frame(width: 36, height: 36)
@@ -312,10 +332,10 @@ struct HistoryScreen: View {
             }
             .padding(.bottom, 12)
 
-            Text("Games on \(selectedKey)").foregroundColor(.white).font(.subheadline.weight(.semibold))
+            Text("Games on \(selectedKey)").foregroundColor(.white).font(appBodyBoldFont)
 
             if selectedEntries.isEmpty {
-                Text("No games played.").foregroundColor(.gray)
+                Text("No games played.").foregroundColor(.gray).font(appBodyFont)
             } else {
                 ScrollView {
                     VStack(spacing: 8) {
@@ -345,17 +365,18 @@ struct HistoryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(entry.answer.uppercased()).foregroundColor(.white).fontWeight(.bold)
+                Text(entry.answer.uppercased()).foregroundColor(.white).font(appBodyBoldFont)
                 Spacer()
                 Text(entry.won ? "Won" : "Lost")
                     .foregroundColor(entry.won ? correctColor : Color(red: 0xEF/255, green: 0x44/255, blue: 0x44/255))
-                    .fontWeight(.semibold)
+                    .font(appBodyBoldFont)
             }
 
             if expanded {
                 FlexibleView(data: entry.guesses, spacing: 6, alignment: .leading) { guess in
                     Text(guess.uppercased())
                         .foregroundColor(.white)
+                        .font(appCaptionBoldFont)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(RoundedRectangle(cornerRadius: 4).fill(absentColor))
@@ -374,7 +395,7 @@ struct StatsWrapper: View {
 
     var body: some View {
         VStack {
-            Text("Statistics").font(.title2.bold()).foregroundColor(.white)
+            Text("Statistics").font(appSectionTitleFont).foregroundColor(.white)
             StatsScreen(entries: viewModel.history)
             InvertibleOutlineButton(label: "Back", action: onBack, borderColor: .gray)
         }
@@ -388,7 +409,7 @@ struct StatsScreen: View {
 
     var body: some View {
         if entries.isEmpty {
-            VStack { Spacer(); Text("No games yet.").foregroundColor(.gray); Spacer() }
+            VStack { Spacer(); Text("No games yet.").foregroundColor(.gray).font(appBodyFont); Spacer() }
         } else {
             let total = entries.count
             let wins = entries.filter(\.won).count
@@ -401,13 +422,13 @@ struct StatsScreen: View {
 
             VStack(spacing: 12) {
                 HStack {
-                    VStack { Text("Games Played").foregroundColor(.white).fontWeight(.bold); Text("\(total)").foregroundColor(.white) }
+                    VStack { Text("Games Played").foregroundColor(.white).font(appBodyBoldFont); Text("\(total)").foregroundColor(.white).font(appBodyFont) }
                     Spacer()
-                    VStack { Text("Win Percentage").foregroundColor(.white).fontWeight(.bold); Text(String(format: "%.1f%%", winRate)).foregroundColor(.white) }
+                    VStack { Text("Win Percentage").foregroundColor(.white).font(appBodyBoldFont); Text(String(format: "%.1f%%", winRate)).foregroundColor(.white).font(appBodyFont) }
                 }
 
-                Text("Guess Distribution").foregroundColor(.white).font(.headline)
-                Text("Number of games by guess count").foregroundColor(.gray).font(.caption)
+                Text("Guess Distribution").foregroundColor(.white).font(appBodyBoldFont)
+                Text("Number of games by guess count").foregroundColor(.gray).font(appCaptionFont)
 
                 VStack(spacing: 8) {
                     ForEach(1...6, id: \.self) { guess in
@@ -415,7 +436,7 @@ struct StatsScreen: View {
                         let factor = maxCount == minCount ? 1.0 : Double(count - minCount) / Double(maxCount - minCount)
                         let barColor = Color.interpolate(from: Color(red: 0x0B/255, green: 0x4C/255, blue: 0x2D/255), to: Color(red: 0xA7/255, green: 0xF3/255, blue: 0xD0/255), factor: factor)
                         HStack(spacing: 8) {
-                            Text("\(guess)").foregroundColor(.white).fontWeight(.bold)
+                            Text("\(guess)").foregroundColor(.white).font(appBodyBoldFont)
                             GeometryReader { geo in
                                 HStack(spacing: 0) {
                                     RoundedRectangle(cornerRadius: 6)
@@ -423,8 +444,8 @@ struct StatsScreen: View {
                                         .frame(width: geo.size.width * max(Double(count) / Double(max(maxCount, 1)), 0.05), height: 28)
                                         .overlay(alignment: .leading) {
                                             Text("\(count)")
-                                                .foregroundColor(factor > 0.5 ? Color(red: 0x0F/255, green: 0x17/255, blue: 0x2A/255) : .white)
-                                                .font(.caption.bold())
+                                                .foregroundColor(factor > 0.5 ? Color(red: 0x0F/255, green: 0x17/255, blue: 0x2A/255) : Color.white)
+                                                .font(appCaptionBoldFont)
                                                 .padding(.leading, 6)
                                         }
                                     Spacer(minLength: 0)
@@ -449,8 +470,8 @@ struct InvertibleOutlineButton: View {
     var body: some View {
         Button(action: action) {
             Text(label)
-                .fontWeight(.semibold)
-                .foregroundColor(pressed ? .black : borderColor)
+                .font(appBodyBoldFont)
+                .foregroundColor(pressed ? Color.black : borderColor)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
                 .frame(minWidth: 110)
