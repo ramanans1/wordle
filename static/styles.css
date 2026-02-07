@@ -139,7 +139,7 @@ header p {
 
 .board-row {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--board-columns, 5), 1fr);
   gap: 10px;
 }
 
@@ -211,3 +211,13 @@ a {
     align-items: start;
   }
 }
+
+#word-length {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  padding: 12px;
+  font-size: 16px;
+}
+

@@ -3,6 +3,7 @@ let state = null;
 const guessInput = document.getElementById("guess-input");
 const submitButton = document.getElementById("submit-guess");
 const newGameButton = document.getElementById("new-game");
+const wordLengthSelect = document.getElementById("word-length");
 const boardEl = document.getElementById("board");
 const keyboardEl = document.getElementById("keyboard");
 const messageEl = document.getElementById("message");
@@ -12,12 +13,16 @@ const keyboardRows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 async function init() {
   attachEvents();
   await ensureGame();
+  updateInputForLength(getWordLength());
   guessInput.focus();
 }
 
 function attachEvents() {
   submitButton.addEventListener("click", submitGuess);
   newGameButton.addEventListener("click", startNewGame);
+  wordLengthSelect.addEventListener("change", () => {
+    updateInputForLength(getWordLength());
+  });
   guessInput.addEventListener("keyup", (event) => {
     if (event.key === "Enter") {
       submitGuess();
@@ -25,11 +30,22 @@ function attachEvents() {
   });
 }
 
+function getWordLength() {
+  return Number(wordLengthSelect.value || "5");
+}
+
+function updateInputForLength(length) {
+  guessInput.maxLength = length;
+  guessInput.placeholder = `Enter ${length}-letter word`;
+}
+
 async function ensureGame() {
   try {
     const res = await fetch("/api/state");
     if (res.ok) {
       state = await res.json();
+      wordLengthSelect.value = String(state.wordLength || 5);
+      updateInputForLength(state.wordLength || 5);
       render();
       return;
     }
@@ -45,9 +61,19 @@ async function ensureGame() {
 
 async function startNewGame() {
   try {
-    const res = await fetch("/api/new-game", { method: "POST" });
+    const wordLength = getWordLength();
+    const res = await fetch("/api/new-game", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wordLength }),
+    });
     state = await res.json();
-    setMessage("New game started. Good luck!");
+    if (!res.ok) {
+      setMessage(state.error || "Could not start a new game.", true);
+      return;
+    }
+    updateInputForLength(state.wordLength || wordLength);
+    setMessage(`New ${state.wordLength}-letter game started. Good luck!`);
     render();
     guessInput.value = "";
     guessInput.focus();
@@ -64,7 +90,7 @@ async function submitGuess() {
 
   const guess = guessInput.value.trim();
   if (!guess) {
-    setMessage("Enter a five-letter word.", true);
+    setMessage(`Enter a ${state.wordLength}-letter word.`, true);
     return;
   }
 
@@ -93,19 +119,21 @@ function render() {
   keyboardEl.innerHTML = "";
 
   const rows = state.maxGuesses;
+  const columns = state.wordLength || 5;
+  boardEl.style.setProperty("--board-columns", columns);
   for (let i = 0; i < rows; i++) {
     const row = document.createElement("div");
     row.className = "board-row";
     const guess = state.guesses[i];
     if (guess) {
-      for (let j = 0; j < 5; j++) {
+      for (let j = 0; j < columns; j++) {
         const tile = document.createElement("div");
         tile.className = `tile ${guess.result[j]}`;
         tile.textContent = guess.word[j].toUpperCase();
         row.appendChild(tile);
       }
     } else {
-      for (let j = 0; j < 5; j++) {
+      for (let j = 0; j < columns; j++) {
         const tile = document.createElement("div");
         tile.className = "tile";
         tile.textContent = "";
@@ -149,7 +177,7 @@ function computeLetterStates(guesses) {
   guesses.forEach((guess) => {
     guess.word.split("").forEach((letter, idx) => {
       const verdict = guess.result[idx];
-      const state = verdict === "present" || verdict === "correct" ? "present" : verdict; // treat both as green
+      const state = verdict === "present" || verdict === "correct" ? "present" : verdict;
       const current = result[letter] || "unused";
       if (priority[state] > priority[current]) {
         result[letter] = state;
