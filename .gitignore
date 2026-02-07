@@ -14,3 +14,10 @@ android/local.properties
 # IDE
 .idea/
 .DS_Store
+
+# Xcode user data
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Local Xcode UI state
+*.xcuserstate
