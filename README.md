@@ -25,3 +25,14 @@ Then open http://localhost:8000 in a browser. The UI uses `/api/new-game` to sta
   2. Connect an Android device with USB debugging enabled (or start an emulator).
   3. Select the `app` run configuration and press **Run**. The game works entirely offline.
 - To build from the command line: `cd android && ./gradlew assembleDebug` then install `app/build/outputs/apk/debug/app-debug.apk` on your device via `adb install -r app-debug.apk`.
+
+
+## iOS app (offline)
+
+- iOS project sources live under `ios/Wordle/Wordle` and mirror the Android app's features and styling (home, game, history calendar, statistics, reset flow, splash, and local word-list gameplay).
+- The iOS app bundles `allowed-answers.txt` and `allowed-guesses.txt` in `ios/Wordle/Wordle/Resources` for fully offline gameplay.
+- To run in Xcode:
+  1. Install Xcode 15+.
+  2. Install [XcodeGen](https://github.com/yonaskolb/XcodeGen) if not already installed.
+  3. Generate the project: `cd ios/Wordle && xcodegen`.
+  4. Open `Wordle.xcodeproj`, choose an iOS simulator/device, and run.
