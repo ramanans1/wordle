@@ -35,29 +35,41 @@ struct RootView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            switch route {
-            case .home:
-                HomeScreen(
-                    onPlay: { route = .game },
-                    onHistory: { route = .history },
-                    onStats: { route = .stats },
-                    onAbout: { route = .about },
-                    onHowToPlay: { route = .howToPlay },
-                    onReset: {},
-                    focusedMenuId: $lastMenuFocusId
-                )
-                    .environmentObject(viewModel)
-            case .game:
-                WordleScreen(onBack: { route = .home }).environmentObject(viewModel)
-            case .history:
-                HistoryWrapper(onBack: { route = .home }).environmentObject(viewModel)
-            case .stats:
-                StatsWrapper(onBack: { route = .home }).environmentObject(viewModel)
-            case .about:
-                AboutWrapper(onBack: { route = .home })
-            case .howToPlay:
-                HowToPlayWrapper(onBack: { route = .home })
-            }
+            HomeScreen(
+                onPlay: { route = .game },
+                onHistory: { route = .history },
+                onStats: { route = .stats },
+                onAbout: { route = .about },
+                onHowToPlay: { route = .howToPlay },
+                onReset: {},
+                focusedMenuId: $lastMenuFocusId
+            )
+                .environmentObject(viewModel)
+                .opacity(route == .home ? 1 : 0)
+                .allowsHitTesting(route == .home)
+
+            WordleScreen(onBack: { route = .home })
+                .environmentObject(viewModel)
+                .opacity(route == .game ? 1 : 0)
+                .allowsHitTesting(route == .game)
+
+            HistoryWrapper(onBack: { route = .home })
+                .environmentObject(viewModel)
+                .opacity(route == .history ? 1 : 0)
+                .allowsHitTesting(route == .history)
+
+            StatsWrapper(onBack: { route = .home })
+                .environmentObject(viewModel)
+                .opacity(route == .stats ? 1 : 0)
+                .allowsHitTesting(route == .stats)
+
+            AboutWrapper(onBack: { route = .home })
+                .opacity(route == .about ? 1 : 0)
+                .allowsHitTesting(route == .about)
+
+            HowToPlayWrapper(onBack: { route = .home })
+                .opacity(route == .howToPlay ? 1 : 0)
+                .allowsHitTesting(route == .howToPlay)
 
             if showSplash {
                 SplashView()
@@ -179,18 +191,26 @@ struct WordleScreen: View {
                         }
                     }
 
-                    HStack(spacing: 12) {
-                        InvertibleOutlineButton(label: "Submit", action: viewModel.submitGuess)
-                        InvertibleOutlineButton(label: "New Game", action: { viewModel.startNewGame(clearMessage: true) })
-                    }
-
-                    KeyboardView(letterStates: viewModel.computeLetterStates(), onLetter: viewModel.onKeyInput, onDelete: viewModel.onDeleteInput)
-
-                    InvertibleOutlineButton(label: "Back", action: onBack, borderColor: .gray)
+                    KeyboardView(
+                        letterStates: viewModel.computeLetterStates(),
+                        onLetter: viewModel.onKeyInput,
+                        onDelete: viewModel.onDeleteInput,
+                        onSubmit: viewModel.submitGuess
+                    )
                 }
                 .padding(16)
+                .padding(.bottom, 80)
             }
             .background(Color.black)
+            .safeAreaInset(edge: .bottom) {
+                HStack(spacing: 12) {
+                    InvertibleOutlineButton(label: "New Game", action: { viewModel.startNewGame(clearMessage: true) })
+                    InvertibleOutlineButton(label: "Back", action: onBack, borderColor: .gray)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.black.opacity(0.9))
+            }
         }
     }
 }
@@ -250,6 +270,7 @@ struct KeyboardView: View {
     let letterStates: [Character: LetterState]
     let onLetter: (Character) -> Void
     let onDelete: () -> Void
+    let onSubmit: () -> Void
 
     private let rows = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"]
 
@@ -262,7 +283,10 @@ struct KeyboardView: View {
                     }
                 }
             }
-            KeyView(label: "⌫", state: .unused, width: 56, action: onDelete)
+            HStack(spacing: 6) {
+                KeyView(label: "⌫", state: .unused, width: 56, action: onDelete)
+                KeyView(label: "Submit", state: .unused, width: 88, action: onSubmit)
+            }
         }
     }
 }
@@ -592,6 +616,7 @@ struct MenuWheelView: View {
     let rowFont: Font
 
     @State private var itemFrames: [String: CGRect] = [:]
+    @State private var snapWorkItem: DispatchWorkItem?
 
     var body: some View {
         GeometryReader { outer in
@@ -631,6 +656,7 @@ struct MenuWheelView: View {
                 .coordinateSpace(name: "wheel")
                 .onPreferenceChange(MenuWheelFrameKey.self) { value in
                     itemFrames.merge(value) { $1 }
+                    scheduleSnap(focusY: focusY, proxy: proxy)
                 }
                 .gesture(
                     DragGesture().onEnded { _ in
@@ -651,6 +677,15 @@ struct MenuWheelView: View {
             }
             focusedId = target
         }
+    }
+
+    private func scheduleSnap(focusY: CGFloat, proxy: ScrollViewProxy) {
+        snapWorkItem?.cancel()
+        let workItem = DispatchWorkItem {
+            snapToNearest(focusY: focusY, proxy: proxy)
+        }
+        snapWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: workItem)
     }
 
     private func scrollToFocused(proxy: ScrollViewProxy) {
@@ -674,9 +709,9 @@ private struct MenuWheelRow: View {
             let distance = abs(midY - focusY)
             let maxDistance = max(focusY + rowHeight, rowHeight * 3)
             let factor = min(distance / max(maxDistance, 1), 1)
-            let scale = 1.0 - (0.22 * factor)
-            let opacity = 1.0 - (0.55 * factor)
-            let blur = 0.5 + (2.5 * factor)
+            let scale = 1.0 - (0.24 * factor)
+            let opacity = 1.0 - (0.6 * factor)
+            let blur = 0.0 + (3.0 * factor)
             let rotation = Double((midY - focusY) / max(maxDistance, 1)) * 18
 
             Text(title)
