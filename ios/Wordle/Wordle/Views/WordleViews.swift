@@ -30,13 +30,22 @@ struct RootView: View {
     @StateObject var viewModel = GameViewModel()
     @State private var route: AppRoute = .home
     @State private var showSplash = true
+    @State private var lastMenuFocusId: String = "play"
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             switch route {
             case .home:
-                HomeScreen(onPlay: { route = .game }, onHistory: { route = .history }, onStats: { route = .stats }, onReset: {})
+                HomeScreen(
+                    onPlay: { route = .game },
+                    onHistory: { route = .history },
+                    onStats: { route = .stats },
+                    onAbout: { route = .about },
+                    onHowToPlay: { route = .howToPlay },
+                    onReset: {},
+                    focusedMenuId: $lastMenuFocusId
+                )
                     .environmentObject(viewModel)
             case .game:
                 WordleScreen(onBack: { route = .home }).environmentObject(viewModel)
@@ -44,6 +53,10 @@ struct RootView: View {
                 HistoryWrapper(onBack: { route = .home }).environmentObject(viewModel)
             case .stats:
                 StatsWrapper(onBack: { route = .home }).environmentObject(viewModel)
+            case .about:
+                AboutWrapper(onBack: { route = .home })
+            case .howToPlay:
+                HowToPlayWrapper(onBack: { route = .home })
             }
 
             if showSplash {
@@ -78,22 +91,38 @@ struct HomeScreen: View {
     let onPlay: () -> Void
     let onHistory: () -> Void
     let onStats: () -> Void
+    let onAbout: () -> Void
+    let onHowToPlay: () -> Void
     let onReset: () -> Void
+    @Binding var focusedMenuId: String
 
     var body: some View {
         VStack {
             Spacer()
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 Text("My Wordle")
                     .font(appTitleFont)
                     .foregroundColor(.white)
                 Text("Designed for Mr. N Sekar")
                     .font(appBodyFont)
                     .foregroundColor(.gray)
-                InvertibleOutlineButton(label: "Play!", action: onPlay)
-                InvertibleOutlineButton(label: "History", action: onHistory)
-                InvertibleOutlineButton(label: "Statistics", action: onStats)
             }
+
+            MenuWheelView(
+                items: [
+                    .init(id: "howto", title: "How to Play", action: onHowToPlay),
+                    .init(id: "about", title: "About", action: onAbout),
+                    .init(id: "play", title: "Play!", action: onPlay),
+                    .init(id: "history", title: "History", action: onHistory),
+                    .init(id: "stats", title: "Statistics", action: onStats)
+                ],
+                focusedId: $focusedMenuId,
+                rowHeight: 56,
+                focusFraction: 0.5,
+                rowFont: appSectionTitleFont
+            )
+            .frame(height: 260)
+
             Spacer()
 
             if showConfirm {
@@ -461,6 +490,68 @@ struct StatsScreen: View {
     }
 }
 
+struct AboutWrapper: View {
+    let onBack: () -> Void
+    @State private var focusedId: String = "a1"
+
+    var body: some View {
+        VStack {
+            Spacer()
+            VStack(spacing: 8) {
+                Text("About").font(appSectionTitleFont).foregroundColor(.white)
+                MenuWheelView(
+                    items: [
+                        .init(id: "a1", title: "My Wordle is a tiny word machine with big opinions about vowels.", action: {}),
+                        .init(id: "a2", title: "It plays offline, keeps your streaks, and judges you politely in all caps.", action: {}),
+                        .init(id: "a3", title: "No ads, no drama, just five letters at a time.", action: {}),
+                        .init(id: "a4", title: "Built for calm minds and chaotic guesses.", action: {})
+                    ],
+                    focusedId: $focusedId,
+                    rowHeight: 52,
+                    focusFraction: 0.18,
+                    rowFont: appBodyFont
+                )
+                .frame(height: 220)
+            }
+            Spacer()
+            InvertibleOutlineButton(label: "Back", action: onBack, borderColor: .gray)
+        }
+        .padding(16)
+        .background(Color.black)
+    }
+}
+
+struct HowToPlayWrapper: View {
+    let onBack: () -> Void
+    @State private var focusedId: String = "h1"
+
+    var body: some View {
+        VStack {
+            Spacer()
+            VStack(spacing: 8) {
+                Text("How to Play").font(appSectionTitleFont).foregroundColor(.white)
+                MenuWheelView(
+                    items: [
+                        .init(id: "h1", title: "Guess the 5-letter word in 6 tries. Easy. Hard. Both.", action: {}),
+                        .init(id: "h2", title: "Green = correct spot, yellow = wrong spot, gray = nope.", action: {}),
+                        .init(id: "h3", title: "Use the keyboard below. It remembers your mistakes. Forever.", action: {}),
+                        .init(id: "h4", title: "New Game starts the next word. Full Reset is the time machine.", action: {})
+                    ],
+                    focusedId: $focusedId,
+                    rowHeight: 52,
+                    focusFraction: 0.18,
+                    rowFont: appBodyFont
+                )
+                .frame(height: 220)
+            }
+            Spacer()
+            InvertibleOutlineButton(label: "Back", action: onBack, borderColor: .gray)
+        }
+        .padding(16)
+        .background(Color.black)
+    }
+}
+
 struct InvertibleOutlineButton: View {
     let label: String
     let action: () -> Void
@@ -472,18 +563,139 @@ struct InvertibleOutlineButton: View {
         Button(action: action) {
             Text(label)
                 .font(appBodyBoldFont)
-                .foregroundColor(pressed ? Color.black : borderColor)
+                .foregroundColor(borderColor)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
                 .frame(minWidth: 110)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(pressed ? .white : .clear)
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(borderColor, lineWidth: 1.5))
-                )
+                .contentShape(Rectangle())
+                .opacity(pressed ? 0.6 : 1.0)
         }
         .buttonStyle(.plain)
         .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in pressed = true }.onEnded { _ in pressed = false })
+    }
+}
+
+struct MenuWheelItem: Hashable, Identifiable {
+    let id: String
+    let title: String
+    let action: () -> Void
+
+    static func == (lhs: MenuWheelItem, rhs: MenuWheelItem) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+struct MenuWheelView: View {
+    let items: [MenuWheelItem]
+    @Binding var focusedId: String
+    let rowHeight: CGFloat
+    let focusFraction: CGFloat
+    let rowFont: Font
+
+    @State private var itemFrames: [String: CGRect] = [:]
+
+    var body: some View {
+        GeometryReader { outer in
+            let focusY = outer.size.height * focusFraction
+            let topPadding = max(focusY - (rowHeight / 2), 0)
+            let bottomPadding = max(outer.size.height - focusY - (rowHeight / 2), 0)
+
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 14) {
+                        ForEach(items) { item in
+                            MenuWheelRow(
+                                title: item.title,
+                                focusY: focusY,
+                                rowHeight: rowHeight,
+                                rowFont: rowFont
+                            )
+                            .id(item.id)
+                            .background(
+                                GeometryReader { geo in
+                                    Color.clear
+                                        .preference(
+                                            key: MenuWheelFrameKey.self,
+                                            value: [item.id: geo.frame(in: .named("wheel"))]
+                                        )
+                                }
+                            )
+                            .onTapGesture {
+                                focusedId = item.id
+                                item.action()
+                            }
+                        }
+                    }
+                    .padding(.top, topPadding)
+                    .padding(.bottom, bottomPadding)
+                }
+                .coordinateSpace(name: "wheel")
+                .onPreferenceChange(MenuWheelFrameKey.self) { value in
+                    itemFrames.merge(value) { $1 }
+                }
+                .gesture(
+                    DragGesture().onEnded { _ in
+                        snapToNearest(focusY: focusY, proxy: proxy)
+                    }
+                )
+                .onAppear { scrollToFocused(proxy: proxy) }
+            }
+        }
+    }
+
+    private func snapToNearest(focusY: CGFloat, proxy: ScrollViewProxy) {
+        guard !itemFrames.isEmpty else { return }
+        let nearest = itemFrames.min { abs($0.value.midY - focusY) < abs($1.value.midY - focusY) }
+        if let target = nearest?.key {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                proxy.scrollTo(target, anchor: UnitPoint(x: 0.5, y: focusFraction))
+            }
+            focusedId = target
+        }
+    }
+
+    private func scrollToFocused(proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            withAnimation(.easeOut(duration: 0.3)) {
+                proxy.scrollTo(focusedId, anchor: UnitPoint(x: 0.5, y: focusFraction))
+            }
+        }
+    }
+}
+
+private struct MenuWheelRow: View {
+    let title: String
+    let focusY: CGFloat
+    let rowHeight: CGFloat
+    let rowFont: Font
+
+    var body: some View {
+        GeometryReader { geo in
+            let midY = geo.frame(in: .named("wheel")).midY
+            let distance = abs(midY - focusY)
+            let maxDistance = max(focusY + rowHeight, rowHeight * 3)
+            let factor = min(distance / max(maxDistance, 1), 1)
+            let scale = 1.0 - (0.22 * factor)
+            let opacity = 1.0 - (0.55 * factor)
+            let blur = 0.5 + (2.5 * factor)
+            let rotation = Double((midY - focusY) / max(maxDistance, 1)) * 18
+
+            Text(title)
+                .font(rowFont)
+                .foregroundColor(.white)
+                .scaleEffect(scale)
+                .opacity(opacity)
+                .blur(radius: blur)
+                .rotation3DEffect(.degrees(rotation), axis: (x: 1, y: 0, z: 0))
+                .frame(maxWidth: .infinity, minHeight: rowHeight)
+        }
+        .frame(height: rowHeight)
+    }
+}
+
+private struct MenuWheelFrameKey: PreferenceKey {
+    static var defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue()) { $1 }
     }
 }
 

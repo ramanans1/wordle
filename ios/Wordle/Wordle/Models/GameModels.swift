@@ -51,4 +51,6 @@ enum AppRoute {
     case game
     case history
     case stats
+    case about
+    case howToPlay
 }
