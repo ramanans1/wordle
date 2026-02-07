@@ -8,6 +8,7 @@ targets:
       - Wordle
     resources:
       - Wordle/Resources
+      - Wordle/Resources/*.ttf
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.wordleios

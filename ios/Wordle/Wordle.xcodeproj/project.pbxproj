@@ -7,10 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5B21956CDF3C6B26444C57D4 /* Merriweather_24pt-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 23E5C2B5272C643FDDDF5D4C /* Merriweather_24pt-Black.ttf */; };
 		61983C218B97372B362D52B5 /* allowed-guesses.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1407B8B46ABF8A1A811E1D6F /* allowed-guesses.txt */; };
+		72A4652A9CC12C0E13E83541 /* Merriweather_24pt-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DE3C91202BBD0E624638A4A6 /* Merriweather_24pt-Bold.ttf */; };
 		7A18C5D3ACB15A91618649BE /* allowed-answers.txt in Resources */ = {isa = PBXBuildFile; fileRef = 441840614705314F7B33C2B7 /* allowed-answers.txt */; };
 		7EA22CCE2C40F0FDAA6B8378 /* Collection+Safe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B90891D2CCB012D9D5DB11 /* Collection+Safe.swift */; };
+		7FCA40304F391B7B74EAD31C /* Merriweather_24pt-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1B098F04B6D5EDC9E960F9B8 /* Merriweather_24pt-SemiBold.ttf */; };
 		8FAF7AC2BD7133F367D33FBB /* WordleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E77C665524E1029E98F60C21 /* WordleApp.swift */; };
+		A43BA197C94E74809E2756E9 /* Merriweather_24pt-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BFBA5EFA2E88E97D78797235 /* Merriweather_24pt-Regular.ttf */; };
 		C937AD1C2413B2BF7AE8B08B /* GameViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D4093B8046BE5345F679185 /* GameViewModel.swift */; };
 		D954FD9F67BCCC6C6ACA9209 /* WordleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC1710016FC59D51C16980DC /* WordleViews.swift */; };
 		F5EF1D78052A6404377153BA /* GameModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE8F0F34FA6D95521B1BC023 /* GameModels.swift */; };
@@ -18,13 +22,17 @@
 
 /* Begin PBXFileReference section */
 		1407B8B46ABF8A1A811E1D6F /* allowed-guesses.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "allowed-guesses.txt"; sourceTree = "<group>"; };
+		1B098F04B6D5EDC9E960F9B8 /* Merriweather_24pt-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather_24pt-SemiBold.ttf"; sourceTree = "<group>"; };
+		23E5C2B5272C643FDDDF5D4C /* Merriweather_24pt-Black.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather_24pt-Black.ttf"; sourceTree = "<group>"; };
 		25B90891D2CCB012D9D5DB11 /* Collection+Safe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Collection+Safe.swift"; sourceTree = "<group>"; };
 		441840614705314F7B33C2B7 /* allowed-answers.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "allowed-answers.txt"; sourceTree = "<group>"; };
 		5F244FA70DE898E67A3961EF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9D4093B8046BE5345F679185 /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewModel.swift; sourceTree = "<group>"; };
 		BE8F0F34FA6D95521B1BC023 /* GameModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModels.swift; sourceTree = "<group>"; };
+		BFBA5EFA2E88E97D78797235 /* Merriweather_24pt-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather_24pt-Regular.ttf"; sourceTree = "<group>"; };
 		C0173A62F92E1307FCC8A20A /* Wordle.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Wordle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC1710016FC59D51C16980DC /* WordleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordleViews.swift; sourceTree = "<group>"; };
+		DE3C91202BBD0E624638A4A6 /* Merriweather_24pt-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather_24pt-Bold.ttf"; sourceTree = "<group>"; };
 		E77C665524E1029E98F60C21 /* WordleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordleApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -42,6 +50,10 @@
 			children = (
 				441840614705314F7B33C2B7 /* allowed-answers.txt */,
 				1407B8B46ABF8A1A811E1D6F /* allowed-guesses.txt */,
+				23E5C2B5272C643FDDDF5D4C /* Merriweather_24pt-Black.ttf */,
+				DE3C91202BBD0E624638A4A6 /* Merriweather_24pt-Bold.ttf */,
+				BFBA5EFA2E88E97D78797235 /* Merriweather_24pt-Regular.ttf */,
+				1B098F04B6D5EDC9E960F9B8 /* Merriweather_24pt-SemiBold.ttf */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -154,6 +166,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5B21956CDF3C6B26444C57D4 /* Merriweather_24pt-Black.ttf in Resources */,
+				72A4652A9CC12C0E13E83541 /* Merriweather_24pt-Bold.ttf in Resources */,
+				A43BA197C94E74809E2756E9 /* Merriweather_24pt-Regular.ttf in Resources */,
+				7FCA40304F391B7B74EAD31C /* Merriweather_24pt-SemiBold.ttf in Resources */,
 				7A18C5D3ACB15A91618649BE /* allowed-answers.txt in Resources */,
 				61983C218B97372B362D52B5 /* allowed-guesses.txt in Resources */,
 			);

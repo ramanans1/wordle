@@ -5,10 +5,10 @@ private let presentColor = Color(red: 0xF5/255, green: 0x9E/255, blue: 0x0B/255)
 private let absentColor = Color(red: 0x1F/255, green: 0x29/255, blue: 0x37/255)
 private let unusedColor = Color(red: 0x11/255, green: 0x18/255, blue: 0x27/255)
 
-private let appFontRegularName = "Fraunces_72pt-Regular"
-private let appFontSemiBoldName = "Fraunces_72pt-SemiBold"
-private let appFontBoldName = "Fraunces_72pt-Bold"
-private let appFontBlackName = "Fraunces_72pt-Black"
+private let appFontRegularName = "Merriweather24pt-Regular"
+private let appFontSemiBoldName = "Merriweather24pt-SemiBold"
+private let appFontBoldName = "Merriweather24pt-Bold"
+private let appFontBlackName = "Merriweather24pt-Black"
 
 private func appFont(_ name: String, _ size: CGFloat) -> Font {
     .custom(name, size: size)
@@ -24,6 +24,7 @@ private let appCaptionFont = appFont(appFontRegularName, 12)
 private let appCaptionBoldFont = appFont(appFontSemiBoldName, 12)
 private let appTileFont = appFont(appFontBlackName, 20)
 private let appKeyboardFont = appFont(appFontBoldName, 16)
+
 
 struct RootView: View {
     @StateObject var viewModel = GameViewModel()

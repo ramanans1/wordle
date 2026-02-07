@@ -33,10 +33,10 @@
     </array>
     <key>UIAppFonts</key>
     <array>
-        <string>Fonts/Fraunces_72pt-Regular.ttf</string>
-        <string>Fonts/Fraunces_72pt-SemiBold.ttf</string>
-        <string>Fonts/Fraunces_72pt-Bold.ttf</string>
-        <string>Fonts/Fraunces_72pt-Black.ttf</string>
+        <string>Merriweather_24pt-Regular.ttf</string>
+        <string>Merriweather_24pt-SemiBold.ttf</string>
+        <string>Merriweather_24pt-Bold.ttf</string>
+        <string>Merriweather_24pt-Black.ttf</string>
     </array>
 </dict>
 </plist>
