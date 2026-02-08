@@ -14,6 +14,12 @@
     </header>
 
     <section class="controls">
+      <select id="word-length" aria-label="Word length">
+        <option value="3">3 letters</option>
+        <option value="4">4 letters</option>
+        <option value="5" selected>5 letters</option>
+        <option value="6">6 letters</option>
+      </select>
       <input id="guess-input" type="text" maxlength="5" placeholder="Enter 5-letter word" autocomplete="off" />
       <button id="submit-guess">Submit Guess</button>
       <button id="new-game">New Game</button>
