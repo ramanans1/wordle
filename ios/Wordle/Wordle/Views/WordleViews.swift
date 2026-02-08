@@ -245,6 +245,7 @@ struct WordleScreen: View {
             ProgressView().progressViewStyle(.circular)
         } else {
             let tileSize = computeTileSize(state: viewModel.state)
+            let isTabletPortrait = UIScreen.main.bounds.width >= 700 && UIScreen.main.bounds.height > UIScreen.main.bounds.width
             VStack(spacing: 12) {
                 Text("My Wordle").font(appPageTitleFont).foregroundColor(.white)
 
@@ -272,6 +273,7 @@ struct WordleScreen: View {
                     onDelete: viewModel.onDeleteInput,
                     onSubmit: viewModel.submitGuess
                 )
+                .scaleEffect(isTabletPortrait ? 1.2 : 1.0)
             }
             .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -305,7 +307,10 @@ struct WordleScreen: View {
         let heightSpacing = tileSpacing * CGFloat(max(maxRows - 1, 0))
         let widthSize = (widthAvailable - widthSpacing) / CGFloat(wordLength)
         let heightSize = (boardHeightBudget - heightSpacing) / CGFloat(maxRows)
-        return min(60, max(28, min(widthSize, heightSize)))
+        let isTabletPortrait = screen.width >= 700 && screen.height > screen.width
+        let maxTile = isTabletPortrait ? 78.0 : 60.0
+        let minTile = isTabletPortrait ? 32.0 : 28.0
+        return min(maxTile, max(minTile, min(widthSize, heightSize)))
     }
 }
 

@@ -31,6 +31,10 @@
     <array>
         <string>UIInterfaceOrientationPortrait</string>
     </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
     <key>UIAppFonts</key>
     <array>
         <string>Merriweather_24pt-Regular.ttf</string>
