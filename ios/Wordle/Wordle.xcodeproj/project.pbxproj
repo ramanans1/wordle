@@ -23,6 +23,7 @@
 		CA3A84C76306F134E551C61C /* allowed-answers-6.txt in Resources */ = {isa = PBXBuildFile; fileRef = 5AF868B1EA7E581156742A85 /* allowed-answers-6.txt */; };
 		D954FD9F67BCCC6C6ACA9209 /* WordleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC1710016FC59D51C16980DC /* WordleViews.swift */; };
 		DC5B376A681E98B093C8E702 /* allowed-answers-3.txt in Resources */ = {isa = PBXBuildFile; fileRef = AC63FE3B75F9078DB7FAF290 /* allowed-answers-3.txt */; };
+		BFFE58611D2B4B54A72B42BC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1FA47B82C4A242E193447311 /* Assets.xcassets */; };
 		F5EF1D78052A6404377153BA /* GameModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE8F0F34FA6D95521B1BC023 /* GameModels.swift */; };
 /* End PBXBuildFile section */
 
@@ -30,6 +31,7 @@
 		11808B5C56DF2B25BCE72150 /* allowed-guesses-3.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "allowed-guesses-3.txt"; sourceTree = "<group>"; };
 		1407B8B46ABF8A1A811E1D6F /* allowed-guesses.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "allowed-guesses.txt"; sourceTree = "<group>"; };
 		1B098F04B6D5EDC9E960F9B8 /* Merriweather_24pt-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather_24pt-SemiBold.ttf"; sourceTree = "<group>"; };
+		1FA47B82C4A242E193447311 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Assets.xcassets"; sourceTree = "<group>"; };
 		23E5C2B5272C643FDDDF5D4C /* Merriweather_24pt-Black.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Merriweather_24pt-Black.ttf"; sourceTree = "<group>"; };
 		25B90891D2CCB012D9D5DB11 /* Collection+Safe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Collection+Safe.swift"; sourceTree = "<group>"; };
 		2FD413E17BC40EE1BDE323C0 /* allowed-guesses-4.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "allowed-guesses-4.txt"; sourceTree = "<group>"; };
@@ -60,6 +62,7 @@
 		1CD47E0BC867D62A017BB807 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				1FA47B82C4A242E193447311 /* Assets.xcassets */,
 				AC63FE3B75F9078DB7FAF290 /* allowed-answers-3.txt */,
 				76377591ABD1C78FD7CAA518 /* allowed-answers-4.txt */,
 				5AF868B1EA7E581156742A85 /* allowed-answers-6.txt */,
@@ -184,6 +187,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BFFE58611D2B4B54A72B42BC /* Assets.xcassets in Resources */,
 				5B21956CDF3C6B26444C57D4 /* Merriweather_24pt-Black.ttf in Resources */,
 				72A4652A9CC12C0E13E83541 /* Merriweather_24pt-Bold.ttf in Resources */,
 				A43BA197C94E74809E2756E9 /* Merriweather_24pt-Regular.ttf in Resources */,
