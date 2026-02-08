@@ -36,12 +36,15 @@ struct RootView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             HomeScreen(
-                onPlay: { route = .game },
                 onHistory: { route = .history },
                 onStats: { route = .stats },
                 onAbout: { route = .about },
                 onHowToPlay: { route = .howToPlay },
                 onReset: {},
+                onStartMode: { mode in
+                    viewModel.setMode(mode)
+                    route = .game
+                },
                 focusedMenuId: $lastMenuFocusId
             )
                 .environmentObject(viewModel)
@@ -99,71 +102,137 @@ struct HomeScreen: View {
     @EnvironmentObject var viewModel: GameViewModel
     @State private var showConfirm = false
     @State private var resetMessage: String?
+    @State private var showModePicker = false
+    @State private var focusedModeId: String = GameMode.mini.id
 
-    let onPlay: () -> Void
     let onHistory: () -> Void
     let onStats: () -> Void
     let onAbout: () -> Void
     let onHowToPlay: () -> Void
     let onReset: () -> Void
+    let onStartMode: (GameMode) -> Void
     @Binding var focusedMenuId: String
 
     var body: some View {
-        VStack {
-            Spacer()
-            VStack(spacing: 8) {
-                Text("My Wordle")
-                    .font(appTitleFont)
-                    .foregroundColor(.white)
-                Text("Designed for Mr. N Sekar")
-                    .font(appBodyFont)
-                    .foregroundColor(.gray)
-            }
-
-            MenuWheelView(
-                items: [
-                    .init(id: "howto", title: "How to Play", action: onHowToPlay),
-                    .init(id: "about", title: "About", action: onAbout),
-                    .init(id: "play", title: "Play!", action: onPlay),
-                    .init(id: "history", title: "History", action: onHistory),
-                    .init(id: "stats", title: "Statistics", action: onStats)
-                ],
-                focusedId: $focusedMenuId,
-                rowHeight: 56,
-                focusFraction: 0.5,
-                rowFont: appSectionTitleFont
-            )
-            .frame(height: 260)
-
-            Spacer()
-
-            if showConfirm {
-                Text("This will erase all progress and restart the word sequence.")
-                    .font(appCaptionFont)
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-                HStack(spacing: 10) {
-                    InvertibleOutlineButton(label: "Yes") {
-                        viewModel.fullReset()
-                        onReset()
-                        showConfirm = false
-                        resetMessage = "Fully reset!"
-                    }
-                    InvertibleOutlineButton(label: "No, go back", action: { showConfirm = false }, borderColor: Color.gray)
+        ZStack {
+            VStack {
+                Spacer()
+                VStack(spacing: 8) {
+                    Text("My Wordle")
+                        .font(appTitleFont)
+                        .foregroundColor(.white)
+                    Text("Designed for Mr. N Sekar")
+                        .font(appBodyFont)
+                        .foregroundColor(.gray)
                 }
-            } else {
-                Text("Full Reset")
-                    .foregroundColor(.gray)
-                    .font(appBodyBoldFont)
-                    .onTapGesture { showConfirm = true }
-            }
 
-            if let resetMessage {
-                Text(resetMessage).foregroundColor(correctColor).font(appBodyBoldFont)
+                MenuWheelView(
+                    items: [
+                        .init(id: "howto", title: "How to Play", action: onHowToPlay),
+                        .init(id: "about", title: "About", action: onAbout),
+                        .init(id: "play", title: "Play!", action: {
+                            focusedMenuId = "play"
+                            focusedModeId = GameMode.mini.id
+                            showModePicker = true
+                        }),
+                        .init(id: "history", title: "History", action: onHistory),
+                        .init(id: "stats", title: "Statistics", action: onStats)
+                    ],
+                    focusedId: $focusedMenuId,
+                    rowHeight: 56,
+                    focusFraction: 0.5,
+                    rowFont: appSectionTitleFont
+                )
+                .frame(height: 260)
+                .blur(radius: showModePicker ? 6 : 0)
+                .opacity(showModePicker ? 0.6 : 1)
+                .allowsHitTesting(!showModePicker)
+
+                Spacer()
+
+                if showConfirm {
+                    Text("This will erase all progress and restart the word sequence.")
+                        .font(appCaptionFont)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                    HStack(spacing: 10) {
+                        InvertibleOutlineButton(label: "Yes") {
+                            viewModel.fullReset()
+                            onReset()
+                            showConfirm = false
+                            resetMessage = "Fully reset!"
+                        }
+                        InvertibleOutlineButton(label: "No, go back", action: { showConfirm = false }, borderColor: Color.gray)
+                    }
+                } else {
+                    Text("Full Reset")
+                        .foregroundColor(.gray)
+                        .font(appBodyBoldFont)
+                        .onTapGesture { showConfirm = true }
+                }
+
+                if let resetMessage {
+                    Text(resetMessage).foregroundColor(correctColor).font(appBodyBoldFont)
+                }
+            }
+            .padding(24)
+            .background(Color.black)
+            .onAppear { focusedMenuId = "play" }
+
+            if showModePicker {
+                ModePickerOverlay(
+                    focusedModeId: $focusedModeId,
+                    onDismiss: {
+                        showModePicker = false
+                        focusedMenuId = "play"
+                    },
+                    onSelect: { mode in
+                        showModePicker = false
+                        onStartMode(mode)
+                    }
+                )
             }
         }
-        .padding(24)
-        .background(Color.black)
+    }
+}
+
+struct ModePickerOverlay: View {
+    @Binding var focusedModeId: String
+    let onDismiss: () -> Void
+    let onSelect: (GameMode) -> Void
+
+    var body: some View {
+        GeometryReader { geo in
+            let topHeight = geo.size.height * 0.3
+            let bottomHeight = geo.size.height * 0.3
+
+            ZStack {
+                Color.black.opacity(0.0).ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    Color.clear
+                        .frame(height: topHeight)
+                        .contentShape(Rectangle())
+                        .onTapGesture(perform: onDismiss)
+                    Spacer()
+                    Color.clear
+                        .frame(height: bottomHeight)
+                        .contentShape(Rectangle())
+                        .onTapGesture(perform: onDismiss)
+                }
+
+                HorizontalWheelView(
+                    items: GameMode.allCases.map { mode in
+                        MenuWheelItem(id: mode.id, title: mode.label) { onSelect(mode) }
+                    },
+                    focusedId: $focusedModeId,
+                    itemWidth: 170,
+                    focusFraction: 0.5,
+                    rowFont: appSectionTitleFont
+                )
+                .frame(height: 140)
+            }
+        }
     }
 }
 
@@ -175,32 +244,39 @@ struct WordleScreen: View {
         if viewModel.state.isLoading {
             ProgressView().progressViewStyle(.circular)
         } else {
-            ScrollView {
-                VStack(spacing: 12) {
-                    Text("My Wordle").font(appPageTitleFont).foregroundColor(.white)
+            let tileSize = computeTileSize(state: viewModel.state)
+            let isTabletPortrait = UIScreen.main.bounds.width >= 700 && UIScreen.main.bounds.height > UIScreen.main.bounds.width
+            VStack(spacing: 12) {
+                Text("My Wordle").font(appPageTitleFont).foregroundColor(.white)
 
-                    BoardView(guesses: viewModel.state.guesses, maxRows: viewModel.state.maxGuesses, currentInput: viewModel.state.currentInput)
+                BoardView(
+                    guesses: viewModel.state.guesses,
+                    maxRows: viewModel.state.maxGuesses,
+                    currentInput: viewModel.state.currentInput,
+                    wordLength: viewModel.state.wordLength,
+                    tileSize: tileSize
+                )
 
-                    ZStack {
-                        Rectangle().fill(Color.clear).frame(height: 42)
-                        if let message = viewModel.state.message, !message.isEmpty {
-                            Text(message)
-                                .foregroundColor(viewModel.state.status == .won ? correctColor : (viewModel.state.status == .lost ? presentColor : .white))
-                                .font(appBodyBoldFont)
-                                .multilineTextAlignment(.center)
-                        }
+                ZStack {
+                    Rectangle().fill(Color.clear).frame(height: 42)
+                    if let message = viewModel.state.message, !message.isEmpty {
+                        Text(message)
+                            .foregroundColor(viewModel.state.status == .won ? correctColor : (viewModel.state.status == .lost ? presentColor : .white))
+                            .font(appBodyBoldFont)
+                            .multilineTextAlignment(.center)
                     }
-
-                    KeyboardView(
-                        letterStates: viewModel.computeLetterStates(),
-                        onLetter: viewModel.onKeyInput,
-                        onDelete: viewModel.onDeleteInput,
-                        onSubmit: viewModel.submitGuess
-                    )
                 }
-                .padding(16)
-                .padding(.bottom, 80)
+
+                KeyboardView(
+                    letterStates: viewModel.computeLetterStates(),
+                    onLetter: viewModel.onKeyInput,
+                    onDelete: viewModel.onDeleteInput,
+                    onSubmit: viewModel.submitGuess
+                )
+                .scaleEffect(isTabletPortrait ? 1.2 : 1.0)
             }
+            .padding(16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(Color.black)
             .safeAreaInset(edge: .bottom) {
                 HStack(spacing: 12) {
@@ -213,26 +289,49 @@ struct WordleScreen: View {
             }
         }
     }
+
+    private func computeTileSize(state: GameUiState) -> CGFloat {
+        let screen = UIScreen.main.bounds
+        let horizontalPadding: CGFloat = 16
+        let tileSpacing: CGFloat = 8
+        let titleHeight: CGFloat = 40
+        let messageHeight: CGFloat = 42
+        let keyboardHeight: CGFloat = (3 * 40) + (3 * 6) + 40
+        let bottomBarHeight: CGFloat = 66
+        let interSpacing: CGFloat = 12 * 3
+        let boardHeightBudget = screen.height - (titleHeight + messageHeight + keyboardHeight + bottomBarHeight + interSpacing + 16 + 40)
+        let wordLength = max(state.wordLength, 1)
+        let maxRows = max(state.maxGuesses, 1)
+        let widthAvailable = screen.width - (horizontalPadding * 2)
+        let widthSpacing = tileSpacing * CGFloat(max(wordLength - 1, 0))
+        let heightSpacing = tileSpacing * CGFloat(max(maxRows - 1, 0))
+        let widthSize = (widthAvailable - widthSpacing) / CGFloat(wordLength)
+        let heightSize = (boardHeightBudget - heightSpacing) / CGFloat(maxRows)
+        let isTabletPortrait = screen.width >= 700 && screen.height > screen.width
+        let maxTile = isTabletPortrait ? 78.0 : 60.0
+        let minTile = isTabletPortrait ? 32.0 : 28.0
+        return min(maxTile, max(minTile, min(widthSize, heightSize)))
+    }
 }
 
 struct BoardView: View {
     let guesses: [Guess]
     let maxRows: Int
     let currentInput: String
+    let wordLength: Int
+    let tileSize: CGFloat
 
     var body: some View {
-        let side = min(UIScreen.main.bounds.width, UIScreen.main.bounds.height) * 0.11
-        let size = min(max(side, 42), 64)
         VStack(spacing: 8) {
             ForEach(0..<maxRows, id: \.self) { row in
                 HStack(spacing: 8) {
-                    ForEach(0..<5, id: \.self) { col in
+                    ForEach(0..<wordLength, id: \.self) { col in
                         let guess = guesses.indices.contains(row) ? guesses[row] : nil
                         let letter = guess?.word[safe: col].map { String($0).uppercased() }
                             ?? (row == guesses.count ? currentInput[safe: col].map { String($0).uppercased() } : "")
                             ?? ""
                         let state = guess?.results[safe: col] ?? .unused
-                        TileView(letter: letter, state: state, size: size)
+                        TileView(letter: letter, state: state, size: tileSize)
                     }
                 }
             }
@@ -333,10 +432,15 @@ struct HistoryWrapper: View {
         VStack {
             Text("History").font(appSectionTitleFont).foregroundColor(.white)
             HistoryScreen(entries: viewModel.history)
-            InvertibleOutlineButton(label: "Back", action: onBack, borderColor: .gray)
         }
         .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.black)
+        .safeAreaInset(edge: .bottom) {
+            InvertibleOutlineButton(label: "Back", action: onBack, borderColor: .gray)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
+        }
     }
 }
 
@@ -345,11 +449,14 @@ struct HistoryScreen: View {
     @State private var displayedMonth = YearMonth.current
     @State private var selectedDate = Date()
     @State private var expandedId: Int64?
+    @State private var selectedModes: Set<GameMode> = Set(GameMode.allCases)
 
     var body: some View {
-        let entriesByDate = Dictionary(grouping: entries) { $0.dateString }
+        let filteredEntries = entries.filter { selectedModes.contains($0.mode) }
+        let entriesByDate = Dictionary(grouping: filteredEntries) { $0.dateString }
         let selectedKey = Self.dateString(selectedDate)
         let selectedEntries = entriesByDate[selectedKey] ?? []
+        let formattedDate = Self.formattedDateWithOrdinal(selectedDate)
 
         VStack(alignment: .leading) {
             HStack {
@@ -386,10 +493,26 @@ struct HistoryScreen: View {
             }
             .padding(.bottom, 12)
 
-            Text("Games on \(selectedKey)").foregroundColor(.white).font(appBodyBoldFont)
+            ModeToggleRow(
+                selectedModes: selectedModes,
+                onToggle: { mode in
+                    if selectedModes.contains(mode) {
+                        selectedModes.remove(mode)
+                    } else {
+                        selectedModes.insert(mode)
+                    }
+                }
+            )
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity, alignment: .center)
+
+            Text(selectedEntries.isEmpty ? "No games played on \(formattedDate)" : "Games played on \(formattedDate)")
+                .foregroundColor(.white)
+                .font(appBodyBoldFont)
+                .frame(maxWidth: .infinity, alignment: .center)
 
             if selectedEntries.isEmpty {
-                Text("No games played.").foregroundColor(.gray).font(appBodyFont)
+                EmptyView()
             } else {
                 ScrollView {
                     VStack(spacing: 8) {
@@ -408,6 +531,26 @@ struct HistoryScreen: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+
+    static func formattedDateWithOrdinal(_ date: Date) -> String {
+        let day = Calendar.current.component(.day, from: date)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "LLLL"
+        let month = formatter.string(from: date)
+        let suffix: String
+        let tens = (day % 100) / 10
+        if tens == 1 {
+            suffix = "th"
+        } else {
+            switch day % 10 {
+            case 1: suffix = "st"
+            case 2: suffix = "nd"
+            case 3: suffix = "rd"
+            default: suffix = "th"
+            }
+        }
+        return "\(day)\(suffix) of \(month)"
     }
 }
 
@@ -449,68 +592,143 @@ struct StatsWrapper: View {
 
     var body: some View {
         VStack {
-            Text("Statistics").font(appSectionTitleFont).foregroundColor(.white)
             StatsScreen(entries: viewModel.history)
-            InvertibleOutlineButton(label: "Back", action: onBack, borderColor: .gray)
         }
         .padding(16)
         .background(Color.black)
+        .safeAreaInset(edge: .bottom) {
+            InvertibleOutlineButton(label: "Back", action: onBack, borderColor: .gray)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
+        }
     }
 }
 
 struct StatsScreen: View {
     let entries: [GameHistoryEntry]
+    @State private var selectedMode: GameMode? = nil
 
     var body: some View {
-        if entries.isEmpty {
-            VStack { Spacer(); Text("No games yet.").foregroundColor(.gray).font(appBodyFont); Spacer() }
-        } else {
-            let total = entries.count
-            let wins = entries.filter(\.won).count
-            let winRate = min(max(Double(wins) / Double(total) * 100, 0), 100)
-            let histogram = Dictionary(uniqueKeysWithValues: (1...6).map { guessCount in
-                (guessCount, entries.filter { $0.won && $0.guesses.count == guessCount }.count)
-            })
-            let maxCount = histogram.values.max() ?? 1
-            let minCount = histogram.values.min() ?? 0
+        let filteredEntries = entries.filter { $0.mode == (selectedMode ?? .classic) }
+        VStack(spacing: 12) {
+            if selectedMode == nil {
+                Spacer()
+                Text("Statistics").font(appSectionTitleFont).foregroundColor(.white)
+                ModeToggleRow(
+                    selectedModes: [],
+                    onToggle: { mode in
+                        selectedMode = mode
+                    }
+                )
+                Spacer()
+            } else if let selectedMode {
+                Text("Statistics").font(appSectionTitleFont).foregroundColor(.white)
+                ModeToggleRow(
+                    selectedModes: Set([selectedMode]),
+                    onToggle: { mode in
+                        if selectedMode == mode {
+                            self.selectedMode = nil
+                        } else {
+                            self.selectedMode = mode
+                        }
+                    }
+                )
 
-            VStack(spacing: 12) {
-                HStack {
-                    VStack { Text("Games Played").foregroundColor(.white).font(appBodyBoldFont); Text("\(total)").foregroundColor(.white).font(appBodyFont) }
-                    Spacer()
-                    VStack { Text("Win Percentage").foregroundColor(.white).font(appBodyBoldFont); Text(String(format: "%.1f%%", winRate)).foregroundColor(.white).font(appBodyFont) }
-                }
+                Spacer()
 
-                Text("Guess Distribution").foregroundColor(.white).font(appBodyBoldFont)
-                Text("Number of games by guess count").foregroundColor(.gray).font(appCaptionFont)
+                if filteredEntries.isEmpty {
+                    Text("No games yet.").foregroundColor(.gray).font(appBodyFont)
+                } else {
+                    let total = filteredEntries.count
+                    let wins = filteredEntries.filter(\.won).count
+                    let winRate = min(max(Double(wins) / Double(total) * 100, 0), 100)
+                    let maxGuesses = selectedMode.maxGuesses
+                    let histogram = Dictionary(uniqueKeysWithValues: (1...maxGuesses).map { guessCount in
+                        (guessCount, filteredEntries.filter { $0.won && $0.guesses.count == guessCount }.count)
+                    })
+                    let maxCount = histogram.values.max() ?? 1
+                    let minCount = histogram.values.min() ?? 0
 
-                VStack(spacing: 8) {
-                    ForEach(1...6, id: \.self) { guess in
-                        let count = histogram[guess] ?? 0
-                        let factor = maxCount == minCount ? 1.0 : Double(count - minCount) / Double(maxCount - minCount)
-                        let barColor = Color.interpolate(from: Color(red: 0x0B/255, green: 0x4C/255, blue: 0x2D/255), to: Color(red: 0xA7/255, green: 0xF3/255, blue: 0xD0/255), factor: factor)
-                        HStack(spacing: 8) {
-                            Text("\(guess)").foregroundColor(.white).font(appBodyBoldFont)
-                            GeometryReader { geo in
-                                HStack(spacing: 0) {
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(barColor)
-                                        .frame(width: geo.size.width * max(Double(count) / Double(max(maxCount, 1)), 0.05), height: 28)
-                                        .overlay(alignment: .leading) {
-                                            Text("\(count)")
-                                                .foregroundColor(factor > 0.5 ? Color(red: 0x0F/255, green: 0x17/255, blue: 0x2A/255) : Color.white)
-                                                .font(appCaptionBoldFont)
-                                                .padding(.leading, 6)
+                    VStack(spacing: 12) {
+                        HStack {
+                            VStack { Text("Games Played").foregroundColor(.white).font(appBodyBoldFont); Text("\(total)").foregroundColor(.white).font(appBodyFont) }
+                            Spacer()
+                            VStack { Text("Win Percentage").foregroundColor(.white).font(appBodyBoldFont); Text(String(format: "%.1f%%", winRate)).foregroundColor(.white).font(appBodyFont) }
+                        }
+
+                        Text("Guess Distribution").foregroundColor(.white).font(appBodyBoldFont)
+                        Text("Number of games by guess count").foregroundColor(.gray).font(appCaptionFont)
+
+                        VStack(spacing: 8) {
+                            ForEach(1...maxGuesses, id: \.self) { guess in
+                                let count = histogram[guess] ?? 0
+                                let factor = maxCount == minCount ? 1.0 : Double(count - minCount) / Double(maxCount - minCount)
+                                let barColor = Color.interpolate(from: Color(red: 0x0B/255, green: 0x4C/255, blue: 0x2D/255), to: Color(red: 0xA7/255, green: 0xF3/255, blue: 0xD0/255), factor: factor)
+                                HStack(spacing: 8) {
+                                    Text("\(guess)").foregroundColor(.white).font(appBodyBoldFont)
+                                    GeometryReader { geo in
+                                        HStack(spacing: 0) {
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .fill(barColor)
+                                                .frame(width: geo.size.width * max(Double(count) / Double(max(maxCount, 1)), 0.05), height: 28)
+                                                .overlay(alignment: .leading) {
+                                                    Text("\(count)")
+                                                        .foregroundColor(factor > 0.5 ? Color(red: 0x0F/255, green: 0x17/255, blue: 0x2A/255) : Color.white)
+                                                        .font(appCaptionBoldFont)
+                                                        .padding(.leading, 6)
+                                                }
+                                            Spacer(minLength: 0)
                                         }
-                                    Spacer(minLength: 0)
+                                    }
+                                    .frame(height: 28)
                                 }
                             }
-                            .frame(height: 28)
                         }
                     }
                 }
+
+                Spacer()
             }
         }
+    }
+}
+
+struct ModeToggleRow: View {
+    let selectedModes: Set<GameMode>
+    let onToggle: (GameMode) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(GameMode.allCases) { mode in
+                ModeToggleButton(
+                    label: mode.label,
+                    isSelected: selectedModes.contains(mode)
+                ) {
+                    onToggle(mode)
+                }
+            }
+        }
+    }
+}
+
+struct ModeToggleButton: View {
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(appBodyBoldFont)
+                .foregroundColor(isSelected ? Color(red: 0x0F/255, green: 0x17/255, blue: 0x2A/255) : .white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(isSelected ? correctColor : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -525,10 +743,10 @@ struct AboutWrapper: View {
                 Text("About").font(appSectionTitleFont).foregroundColor(.white)
                 MenuWheelView(
                     items: [
-                        .init(id: "a1", title: "My Wordle is a tiny word machine with big opinions about vowels.", action: {}),
-                        .init(id: "a2", title: "It plays offline, keeps your streaks, and judges you politely in all caps.", action: {}),
-                        .init(id: "a3", title: "No ads, no drama, just five letters at a time.", action: {}),
-                        .init(id: "a4", title: "Built for calm minds and chaotic guesses.", action: {})
+                        .init(id: "a1", title: "My Wordle is a word puzzle where you guess the hidden word.", action: {}),
+                        .init(id: "a2", title: "Four ranks to grow into: Pupil, Scribe, Author, Wordsmith.", action: {}),
+                        .init(id: "a3", title: "Pupil and Scribe are shorter words. Author and Wordsmith are longer.", action: {}),
+                        .init(id: "a4", title: "Play offline and let the calendar keep your victories.", action: {})
                     ],
                     focusedId: $focusedId,
                     rowHeight: 52,
@@ -556,10 +774,13 @@ struct HowToPlayWrapper: View {
                 Text("How to Play").font(appSectionTitleFont).foregroundColor(.white)
                 MenuWheelView(
                     items: [
-                        .init(id: "h1", title: "Guess the 5-letter word in 6 tries. Easy. Hard. Both.", action: {}),
-                        .init(id: "h2", title: "Green = correct spot, yellow = wrong spot, gray = nope.", action: {}),
-                        .init(id: "h3", title: "Use the keyboard below. It remembers your mistakes. Forever.", action: {}),
-                        .init(id: "h4", title: "New Game starts the next word. Full Reset is the time machine.", action: {})
+                        .init(id: "h1", title: "Choose a rank, then try to guess the secret word.", action: {}),
+                        .init(id: "h2", title: "Pupil is 3 letters, Scribe is 4.", action: {}),
+                        .init(id: "h3", title: "Author is 5 letters, Wordsmith is 6.", action: {}),
+                        .init(id: "h4", title: "Green => right letter, right spot.", action: {}),
+                        .init(id: "h5", title: "Yellow => right letter, wrong spot.", action: {}),
+                        .init(id: "h6", title: "Gray => not in the word.", action: {}),
+                        .init(id: "h7", title: "Good luck!", action: {})
                     ],
                     focusedId: $focusedId,
                     rowHeight: 52,
@@ -697,6 +918,95 @@ struct MenuWheelView: View {
     }
 }
 
+struct HorizontalWheelView: View {
+    let items: [MenuWheelItem]
+    @Binding var focusedId: String
+    let itemWidth: CGFloat
+    let focusFraction: CGFloat
+    let rowFont: Font
+
+    @State private var itemFrames: [String: CGRect] = [:]
+    @State private var snapWorkItem: DispatchWorkItem?
+
+    var body: some View {
+        GeometryReader { outer in
+            let focusX = outer.size.width * focusFraction
+            let leadingPadding = max(focusX - (itemWidth / 2), 0)
+            let trailingPadding = max(outer.size.width - focusX - (itemWidth / 2), 0)
+
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 18) {
+                        ForEach(items) { item in
+                            HorizontalWheelRow(
+                                title: item.title,
+                                focusX: focusX,
+                                itemWidth: itemWidth,
+                                rowFont: rowFont
+                            )
+                            .id(item.id)
+                            .background(
+                                GeometryReader { geo in
+                                    Color.clear
+                                        .preference(
+                                            key: HorizontalWheelFrameKey.self,
+                                            value: [item.id: geo.frame(in: .named("wheelh"))]
+                                        )
+                                }
+                            )
+                            .onTapGesture {
+                                focusedId = item.id
+                                item.action()
+                            }
+                        }
+                    }
+                    .padding(.leading, leadingPadding)
+                    .padding(.trailing, trailingPadding)
+                }
+                .coordinateSpace(name: "wheelh")
+                .onPreferenceChange(HorizontalWheelFrameKey.self) { value in
+                    itemFrames.merge(value) { $1 }
+                    scheduleSnap(focusX: focusX, proxy: proxy)
+                }
+                .gesture(
+                    DragGesture().onEnded { _ in
+                        snapToNearest(focusX: focusX, proxy: proxy)
+                    }
+                )
+                .onAppear { scrollToFocused(proxy: proxy) }
+            }
+        }
+    }
+
+    private func snapToNearest(focusX: CGFloat, proxy: ScrollViewProxy) {
+        guard !itemFrames.isEmpty else { return }
+        let nearest = itemFrames.min { abs($0.value.midX - focusX) < abs($1.value.midX - focusX) }
+        if let target = nearest?.key {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                proxy.scrollTo(target, anchor: UnitPoint(x: focusFraction, y: 0.5))
+            }
+            focusedId = target
+        }
+    }
+
+    private func scheduleSnap(focusX: CGFloat, proxy: ScrollViewProxy) {
+        snapWorkItem?.cancel()
+        let workItem = DispatchWorkItem {
+            snapToNearest(focusX: focusX, proxy: proxy)
+        }
+        snapWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: workItem)
+    }
+
+    private func scrollToFocused(proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            withAnimation(.easeOut(duration: 0.3)) {
+                proxy.scrollTo(focusedId, anchor: UnitPoint(x: focusFraction, y: 0.5))
+            }
+        }
+    }
+}
+
 private struct MenuWheelRow: View {
     let title: String
     let focusY: CGFloat
@@ -728,6 +1038,43 @@ private struct MenuWheelRow: View {
 }
 
 private struct MenuWheelFrameKey: PreferenceKey {
+    static var defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
+private struct HorizontalWheelRow: View {
+    let title: String
+    let focusX: CGFloat
+    let itemWidth: CGFloat
+    let rowFont: Font
+
+    var body: some View {
+        GeometryReader { geo in
+            let midX = geo.frame(in: .named("wheelh")).midX
+            let distance = abs(midX - focusX)
+            let maxDistance = max(focusX + itemWidth, itemWidth * 3)
+            let factor = min(distance / max(maxDistance, 1), 1)
+            let scale = 1.0 - (0.24 * factor)
+            let opacity = 1.0 - (0.6 * factor)
+            let blur = 0.0 + (3.0 * factor)
+            let rotation = Double((midX - focusX) / max(maxDistance, 1)) * -18
+
+            Text(title)
+                .font(rowFont)
+                .foregroundColor(.white)
+                .scaleEffect(scale)
+                .opacity(opacity)
+                .blur(radius: blur)
+                .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0))
+                .frame(minWidth: itemWidth, maxHeight: .infinity)
+        }
+        .frame(width: itemWidth)
+    }
+}
+
+private struct HorizontalWheelFrameKey: PreferenceKey {
     static var defaultValue: [String: CGRect] = [:]
     static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
         value.merge(nextValue()) { $1 }

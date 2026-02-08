@@ -5,20 +5,24 @@ import SwiftUI
 final class GameViewModel: ObservableObject {
     @Published var state = GameUiState()
     @Published var history: [GameHistoryEntry] = []
+    @Published var currentMode: GameMode = .mini
 
-    private let maxGuesses = 6
-    private let wordLength = 5
     private let blockedAnswers: Set<String> = [
         "abuse","abort","adult","arson","bigot","blood","bosom","booze","boozy","bribe",
         "butch","crime","death","detox","drink","drunk","dummy","felon","fraud","gipsy",
         "heist","idiot","kinky","knife","loser","lynch","moron","rifle","smoke","smoky","thief",
         "toxic","toxin","venom","vomit"
     ]
-    private let fallbackWords = ["apple", "baker", "cabin", "delta", "eagle", "fancy", "giant", "habit", "ideal", "joker", "lemon", "magic"]
+    private let fallbackWordsByMode: [GameMode: [String]] = [
+        .mini: ["cat", "dog", "sun", "hat", "bag", "cup", "toy", "pig", "ice", "jam"],
+        .junior: ["play", "rain", "cake", "book", "kite", "fish", "snow", "milk", "gold", "star"],
+        .classic: ["apple", "baker", "cabin", "delta", "eagle", "fancy", "giant", "habit", "ideal", "joker", "lemon", "magic"],
+        .epic: ["planet", "bright", "forest", "castle", "silver", "charge", "stream", "wander", "rocket", "little"]
+    ]
 
     private let historyKey = "history_entries_json"
-    private let answerIndexKey = "answer_index"
     private let randomSeedKey = "random_seed"
+    private let modeKey = "current_mode"
 
     private var wordList: [String] = []
     private var answerList: [String] = []
@@ -30,13 +34,13 @@ final class GameViewModel: ObservableObject {
 
     init() {
         loadPersistedState()
-        loadWords()
+        setMode(currentMode, startGame: false)
     }
 
     func onKeyInput(_ letter: Character) {
         guard state.status == .inProgress else { return }
-        guard state.currentInput.count < wordLength else { return }
-        state.currentInput = String((state.currentInput + String(letter).lowercased()).prefix(wordLength))
+        guard state.currentInput.count < state.wordLength else { return }
+        state.currentInput = String((state.currentInput + String(letter).lowercased()).prefix(state.wordLength))
     }
 
     func onDeleteInput() {
@@ -53,8 +57,8 @@ final class GameViewModel: ObservableObject {
             state.message = "Start a new game."
             return
         }
-        guard guess.count == wordLength else {
-            state.message = "Enter a \(wordLength)-letter word."
+        guard guess.count == state.wordLength else {
+            state.message = "Enter a \(state.wordLength)-letter word."
             return
         }
         guard wordSet.contains(guess) else {
@@ -68,7 +72,7 @@ final class GameViewModel: ObservableObject {
         let status: GameStatus
         if guess == answer {
             status = .won
-        } else if updatedGuesses.count >= maxGuesses {
+        } else if updatedGuesses.count >= state.maxGuesses {
             status = .lost
         } else {
             status = .inProgress
@@ -94,7 +98,8 @@ final class GameViewModel: ObservableObject {
                 timestamp: Int64(Date().timeIntervalSince1970 * 1000),
                 answer: answer,
                 won: status == .won,
-                guesses: updatedGuesses.map { $0.word }
+                guesses: updatedGuesses.map { $0.word },
+                mode: currentMode
             )
             history.insert(entry, at: 0)
             persistHistory()
@@ -102,14 +107,14 @@ final class GameViewModel: ObservableObject {
     }
 
     func startNewGame(clearMessage: Bool = false) {
-        let pool = answerSequence.isEmpty ? fallbackWords : answerSequence
+        let pool = answerSequence.isEmpty ? fallbackWordsByMode[currentMode, default: []] : answerSequence
         if !pool.isEmpty {
             answerIndex = answerIndex % pool.count
             answer = pool[answerIndex]
             answerIndex = (answerIndex + 1) % pool.count
-            UserDefaults.standard.set(answerIndex, forKey: answerIndexKey)
+            persistAnswerIndex(answerIndex, for: currentMode)
         } else {
-            answer = fallbackWords.randomElement() ?? "apple"
+            answer = fallbackWordsByMode[currentMode, default: ["apple"]].randomElement() ?? "apple"
         }
 
         state.guesses = []
@@ -124,7 +129,7 @@ final class GameViewModel: ObservableObject {
         randomSeed = UInt64(Date().timeIntervalSince1970)
         UserDefaults.standard.set(Int(randomSeed), forKey: randomSeedKey)
         answerIndex = 0
-        UserDefaults.standard.set(answerIndex, forKey: answerIndexKey)
+        GameMode.allCases.forEach { UserDefaults.standard.removeObject(forKey: answerIndexKey(for: $0)) }
         answerSequence = shuffledAnswers()
         startNewGame(clearMessage: true)
         state.message = "Fully reset!"
@@ -145,12 +150,12 @@ final class GameViewModel: ObservableObject {
     }
 
     private func scoreGuess(answer: String, guess: String) -> [LetterState] {
-        var verdicts = Array(repeating: LetterState.absent, count: wordLength)
+        var verdicts = Array(repeating: LetterState.absent, count: state.wordLength)
         var remaining: [Character: Int] = [:]
 
         answer.forEach { remaining[$0, default: 0] += 1 }
 
-        for idx in 0..<wordLength {
+        for idx in 0..<state.wordLength {
             let ans = answer[answer.index(answer.startIndex, offsetBy: idx)]
             let g = guess[guess.index(guess.startIndex, offsetBy: idx)]
             if ans == g {
@@ -159,7 +164,7 @@ final class GameViewModel: ObservableObject {
             }
         }
 
-        for idx in 0..<wordLength where verdicts[idx] != .correct {
+        for idx in 0..<state.wordLength where verdicts[idx] != .correct {
             let g = guess[guess.index(guess.startIndex, offsetBy: idx)]
             if (remaining[g] ?? 0) > 0 {
                 verdicts[idx] = .present
@@ -172,8 +177,9 @@ final class GameViewModel: ObservableObject {
 
     private func loadWords() {
         state.isLoading = true
-        let guesses = readWords(named: "allowed-guesses")
-        let answers = readWords(named: "allowed-answers")
+        let guesses = readWords(named: currentMode.guessFile, wordLength: currentMode.wordLength)
+        let answers = readWords(named: currentMode.answerFile, wordLength: currentMode.wordLength)
+        let fallbackWords = fallbackWordsByMode[currentMode, default: []]
         wordList = (guesses.isEmpty ? fallbackWords : guesses).filter { !blockedAnswers.contains($0) }
         answerList = (answers.isEmpty ? fallbackWords : answers).filter { !blockedAnswers.contains($0) }
         wordSet = Set(wordList + answerList)
@@ -187,10 +193,11 @@ final class GameViewModel: ObservableObject {
 
     private func shuffledAnswers() -> [String] {
         var generator = SeededGenerator(seed: randomSeed)
+        let fallbackWords = fallbackWordsByMode[currentMode, default: []]
         return (answerList.isEmpty ? fallbackWords : answerList).shuffled(using: &generator)
     }
 
-    private func readWords(named file: String) -> [String] {
+    private func readWords(named file: String, wordLength: Int) -> [String] {
         guard let url = Bundle.main.url(forResource: file, withExtension: "txt"),
               let content = try? String(contentsOf: url) else { return [] }
 
@@ -201,7 +208,13 @@ final class GameViewModel: ObservableObject {
     }
 
     private func loadPersistedState() {
-        answerIndex = UserDefaults.standard.integer(forKey: answerIndexKey)
+        if let rawMode = UserDefaults.standard.string(forKey: modeKey),
+           let storedMode = GameMode(rawValue: rawMode) {
+            currentMode = storedMode
+        } else {
+            currentMode = .mini
+        }
+        answerIndex = loadAnswerIndex(for: currentMode)
         let persistedSeed = UserDefaults.standard.integer(forKey: randomSeedKey)
         randomSeed = UInt64(persistedSeed == 0 ? 12345 : persistedSeed)
 
@@ -216,6 +229,30 @@ final class GameViewModel: ObservableObject {
         guard let data = try? JSONEncoder().encode(history),
               let raw = String(data: data, encoding: .utf8) else { return }
         UserDefaults.standard.set(raw, forKey: historyKey)
+    }
+
+    func setMode(_ mode: GameMode, startGame: Bool = true) {
+        currentMode = mode
+        UserDefaults.standard.set(mode.rawValue, forKey: modeKey)
+        state.maxGuesses = mode.maxGuesses
+        state.wordLength = mode.wordLength
+        answerIndex = loadAnswerIndex(for: mode)
+        loadWords()
+        if !startGame {
+            state.message = nil
+        }
+    }
+
+    private func answerIndexKey(for mode: GameMode) -> String {
+        "answer_index_\(mode.rawValue)"
+    }
+
+    private func loadAnswerIndex(for mode: GameMode) -> Int {
+        UserDefaults.standard.integer(forKey: answerIndexKey(for: mode))
+    }
+
+    private func persistAnswerIndex(_ index: Int, for mode: GameMode) {
+        UserDefaults.standard.set(index, forKey: answerIndexKey(for: mode))
     }
 }
 
