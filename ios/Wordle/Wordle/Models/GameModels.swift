@@ -16,10 +16,10 @@ enum GameMode: String, Codable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .mini: return "Mini"
-        case .junior: return "Junior"
-        case .classic: return "Classic"
-        case .epic: return "Epic"
+        case .mini: return "Pupil"
+        case .junior: return "Scribe"
+        case .classic: return "Author"
+        case .epic: return "Wordsmith"
         }
     }
 

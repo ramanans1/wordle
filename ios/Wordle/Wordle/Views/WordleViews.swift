@@ -144,7 +144,7 @@ struct HomeScreen: View {
                     rowFont: appSectionTitleFont
                 )
                 .frame(height: 260)
-                .blur(radius: showModePicker ? 12 : 0)
+                .blur(radius: showModePicker ? 6 : 0)
                 .opacity(showModePicker ? 0.6 : 1)
                 .allowsHitTesting(!showModePicker)
 
@@ -226,7 +226,7 @@ struct ModePickerOverlay: View {
                         MenuWheelItem(id: mode.id, title: mode.label) { onSelect(mode) }
                     },
                     focusedId: $focusedModeId,
-                    itemWidth: 140,
+                    itemWidth: 170,
                     focusFraction: 0.5,
                     rowFont: appSectionTitleFont
                 )
@@ -738,10 +738,10 @@ struct AboutWrapper: View {
                 Text("About").font(appSectionTitleFont).foregroundColor(.white)
                 MenuWheelView(
                     items: [
-                        .init(id: "a1", title: "My Wordle now comes in four flavors: Mini, Junior, Classic, Epic.", action: {}),
-                        .init(id: "a2", title: "Short words for quick wins, long words for bragging rights.", action: {}),
-                        .init(id: "a3", title: "Offline play, clean design, and a calendar that remembers.", action: {}),
-                        .init(id: "a4", title: "No ads, no drama, just letters at the length you choose.", action: {})
+                        .init(id: "a1", title: "My Wordle is a word puzzle where you guess the hidden word.", action: {}),
+                        .init(id: "a2", title: "Four ranks to grow into: Pupil, Scribe, Author, Wordsmith.", action: {}),
+                        .init(id: "a3", title: "Pupil and Scribe are shorter words. Author and Wordsmith are longer.", action: {}),
+                        .init(id: "a4", title: "Play offline and let the calendar keep your victories.", action: {})
                     ],
                     focusedId: $focusedId,
                     rowHeight: 52,
@@ -769,10 +769,13 @@ struct HowToPlayWrapper: View {
                 Text("How to Play").font(appSectionTitleFont).foregroundColor(.white)
                 MenuWheelView(
                     items: [
-                        .init(id: "h1", title: "Choose a mode: Mini, Junior, Classic, or Epic.", action: {}),
-                        .init(id: "h2", title: "Mini: 3 letters/5 tries. Junior: 4 letters/6 tries.", action: {}),
-                        .init(id: "h3", title: "Classic: 5 letters/6 tries. Epic: 6 letters/7 tries.", action: {}),
-                        .init(id: "h4", title: "Green = correct spot, yellow = wrong spot, gray = nope.", action: {})
+                        .init(id: "h1", title: "Choose a rank, then try to guess the secret word.", action: {}),
+                        .init(id: "h2", title: "Pupil is 3 letters, Scribe is 4.", action: {}),
+                        .init(id: "h3", title: "Author is 5 letters, Wordsmith is 6.", action: {}),
+                        .init(id: "h4", title: "Green => right letter, right spot.", action: {}),
+                        .init(id: "h5", title: "Yellow => right letter, wrong spot.", action: {}),
+                        .init(id: "h6", title: "Gray => not in the word.", action: {}),
+                        .init(id: "h7", title: "Good luck!", action: {})
                     ],
                     focusedId: $focusedId,
                     rowHeight: 52,
