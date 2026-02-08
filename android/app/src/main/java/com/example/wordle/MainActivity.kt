@@ -392,6 +392,12 @@ class MainActivity : ComponentActivity() {
                     },
                     statsContent = {
                         StatsScreen(entries = history, onBack = { navState.value = Route.HOME })
+                    },
+                    aboutContent = {
+                        AboutScreen()
+                    },
+                    howToPlayContent = {
+                        HowToPlayScreen()
                     }
                 )
                 if (showSplash.value) {
@@ -414,7 +420,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-enum class Route { HOME, GAME, HISTORY, STATS }
+enum class Route { HOME, GAME, HISTORY, STATS, ABOUT, HOW_TO_PLAY }
 
 data class NavState(val route: Route = Route.HOME)
 
@@ -426,7 +432,9 @@ fun AppScaffold(
     navState: MutableStateFlow<Route>,
     gameContent: @Composable () -> Unit,
     historyContent: @Composable () -> Unit,
-    statsContent: @Composable () -> Unit
+    statsContent: @Composable () -> Unit,
+    aboutContent: @Composable () -> Unit,
+    howToPlayContent: @Composable () -> Unit
 ) {
     val route by navState.collectAsState()
     when (route) {
@@ -434,6 +442,8 @@ fun AppScaffold(
             onPlay = { navState.value = Route.GAME },
             onHistory = { navState.value = Route.HISTORY },
             onStats = { navState.value = Route.STATS },
+            onAbout = { navState.value = Route.ABOUT },
+            onHowToPlay = { navState.value = Route.HOW_TO_PLAY },
             onReset = { navState.value = Route.HOME }
         )
         Route.GAME -> gameContent()
@@ -445,11 +455,26 @@ fun AppScaffold(
             statsContent = statsContent,
             onBack = { navState.value = Route.HOME }
         )
+        Route.ABOUT -> AboutScreenWrapper(
+            aboutContent = aboutContent,
+            onBack = { navState.value = Route.HOME }
+        )
+        Route.HOW_TO_PLAY -> HowToPlayScreenWrapper(
+            howToPlayContent = howToPlayContent,
+            onBack = { navState.value = Route.HOME }
+        )
     }
 }
 
 @Composable
-fun HomeScreen(onPlay: () -> Unit, onHistory: () -> Unit, onStats: () -> Unit, onReset: () -> Unit) {
+fun HomeScreen(
+    onPlay: () -> Unit,
+    onHistory: () -> Unit,
+    onStats: () -> Unit,
+    onAbout: () -> Unit,
+    onHowToPlay: () -> Unit,
+    onReset: () -> Unit
+) {
     val viewModel: GameViewModel = viewModel()
     val showConfirm = remember { mutableStateOf(false) }
     val resetMessage = remember { mutableStateOf<String?>(null) }
@@ -479,6 +504,14 @@ fun HomeScreen(onPlay: () -> Unit, onHistory: () -> Unit, onStats: () -> Unit, o
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.LightGray,
                 modifier = Modifier.padding(bottom = 12.dp)
+            )
+            InvertibleOutlineButton(
+                label = "How to Play",
+                onClick = onHowToPlay
+            )
+            InvertibleOutlineButton(
+                label = "About",
+                onClick = onAbout
             )
             InvertibleOutlineButton(
                 label = "Play!",
@@ -646,6 +679,122 @@ fun StatsScreenWrapper(statsContent: @Composable () -> Unit, onBack: () -> Unit)
                 .widthIn(min = 110.dp)
                 .align(Alignment.CenterHorizontally)
         )
+    }
+}
+
+@Composable
+fun AboutScreenWrapper(aboutContent: @Composable () -> Unit, onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "About",
+            style = MaterialTheme.typography.titleLarge,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(modifier = Modifier.weight(1f)) {
+            aboutContent()
+        }
+        InvertibleOutlineButton(
+            onClick = onBack,
+            label = "Back",
+            borderColor = Color(0xFF9CA3AF),
+            normalContentColor = Color(0xFF9CA3AF),
+            modifier = Modifier
+                .widthIn(min = 110.dp)
+                .align(Alignment.CenterHorizontally)
+        )
+    }
+}
+
+@Composable
+fun HowToPlayScreenWrapper(howToPlayContent: @Composable () -> Unit, onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "How to Play",
+            style = MaterialTheme.typography.titleLarge,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(modifier = Modifier.weight(1f)) {
+            howToPlayContent()
+        }
+        InvertibleOutlineButton(
+            onClick = onBack,
+            label = "Back",
+            borderColor = Color(0xFF9CA3AF),
+            normalContentColor = Color(0xFF9CA3AF),
+            modifier = Modifier
+                .widthIn(min = 110.dp)
+                .align(Alignment.CenterHorizontally)
+        )
+    }
+}
+
+@Composable
+fun AboutScreen() {
+    val lines = listOf(
+        "My Wordle is a tiny word machine with big opinions about vowels.",
+        "It plays offline, keeps your streaks, and judges you politely in all caps.",
+        "No ads, no drama, just five letters at a time.",
+        "Built for calm minds and chaotic guesses."
+    )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(8.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        lines.forEach { line ->
+            Text(
+                text = line,
+                color = Color.White,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun HowToPlayScreen() {
+    val lines = listOf(
+        "Guess the 5-letter word in 6 tries. Easy. Hard. Both.",
+        "Green = correct spot, yellow = wrong spot, gray = nope.",
+        "Use the keyboard below. It remembers your mistakes. Forever.",
+        "New Game starts the next word. Full Reset is the time machine."
+    )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(8.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        lines.forEach { line ->
+            Text(
+                text = line,
+                color = Color.White,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
     }
 }
 
@@ -984,26 +1133,17 @@ fun WordleScreen(
             }
         }
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            InvertibleOutlineButton(
-                label = "Submit",
-                onClick = onSubmitGuess,
-                modifier = Modifier.widthIn(min = 110.dp)
-            )
-            InvertibleOutlineButton(
-                label = "New Game",
-                onClick = onNewGame,
-                modifier = Modifier.widthIn(min = 110.dp)
-            )
-        }
+        InvertibleOutlineButton(
+            label = "New Game",
+            onClick = onNewGame,
+            modifier = Modifier.widthIn(min = 110.dp)
+        )
 
         Keyboard(
             letterStates = letterStates,
             onLetter = onKeyPress,
-            onDelete = onDelete
+            onDelete = onDelete,
+            onSubmit = onSubmitGuess
         )
         InvertibleOutlineButton(
             onClick = onBack,
@@ -1065,7 +1205,8 @@ fun Tile(letter: String, state: LetterState, size: Dp = 54.dp) {
 fun Keyboard(
     letterStates: Map<Char, LetterState>,
     onLetter: (Char) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onSubmit: () -> Unit
 ) {
     val rows = listOf("QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM")
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1087,16 +1228,17 @@ fun Keyboard(
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Key(label = "⌫", state = LetterState.UNUSED, onClick = { onDelete() }, isWide = true)
+            Key(label = "⌫", state = LetterState.UNUSED, onClick = { onDelete() }, width = 56.dp)
+            Key(label = "Submit", state = LetterState.UNUSED, onClick = onSubmit, width = 88.dp)
         }
     }
 }
 
 @Composable
-fun Key(label: String, state: LetterState, onClick: (() -> Unit)? = null, isWide: Boolean = false) {
+fun Key(label: String, state: LetterState, onClick: (() -> Unit)? = null, width: Dp = 28.dp) {
     val bg = when (state) {
         LetterState.CORRECT -> CorrectColor
         LetterState.PRESENT -> PresentColor
@@ -1108,7 +1250,6 @@ fun Key(label: String, state: LetterState, onClick: (() -> Unit)? = null, isWide
         LetterState.ABSENT -> Color(0xFFE5E7EB)
         else -> Color(0xFF0F172A)
     }
-    val width = if (isWide) 56.dp else 28.dp
     Box(
         modifier = Modifier
             .width(width)
