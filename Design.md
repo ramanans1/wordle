@@ -1,30 +1,30 @@
 # iOS App System Design (Wordle)
 
-This document describes the complete system design for the iOS Wordle app in this repository. It is derived from the current SwiftUI code and packaged assets under `ios/Wordle/Wordle`.
+This document reflects the current SwiftUI implementation under `ios/Wordle/Wordle`. It is intentionally code-accurate and only describes features that exist in the codebase.
 
 **Scope**
-This document covers the runtime architecture, UI structure, view composition, game logic, state management, persistence, assets, and user interaction flows. It is intentionally code-accurate and avoids features that are not implemented.
+This document covers architecture, UI, game logic, state, persistence, assets, and user flows.
 
 ## 1. High-Level Architecture
 
 **App type**
 - Native iOS app built with SwiftUI.
-- Offline-first. All gameplay runs locally without network access.
+- Offline-first. No network dependencies.
 
 **Entry point**
-- `WordleApp` (`ios/Wordle/Wordle/WordleApp.swift`) is the SwiftUI `@main` entry.
-- The root scene displays `RootView` and forces a dark color scheme.
+- `WordleApp` (`ios/Wordle/Wordle/WordleApp.swift`) is the `@main` entry.
+- Root scene renders `RootView` and forces a dark color scheme.
 
 **Structure**
-- Views are defined in a single SwiftUI file: `Views/WordleViews.swift`.
-- Game state and logic live in `ViewModels/GameViewModel.swift`.
-- Data models are in `Models/GameModels.swift`.
-- Utility extensions are in `Utils/Collection+Safe.swift`.
-- Word list assets and fonts are in `Resources/` and referenced by Info.plist.
+- Views: `ios/Wordle/Wordle/Views/WordleViews.swift`.
+- View model: `ios/Wordle/Wordle/ViewModels/GameViewModel.swift`.
+- Models: `ios/Wordle/Wordle/Models/GameModels.swift`.
+- Utilities: `ios/Wordle/Wordle/Utils/Collection+Safe.swift`.
+- Bundled assets: `ios/Wordle/Wordle/Resources`.
 
 **Design approach**
-- MVVM-style separation: `GameViewModel` is the single state owner and logic coordinator, while views render state and call view-model actions.
-- No external dependencies.
+- MVVM-style separation: `GameViewModel` is the single source of truth for gameplay and history.
+- No third‑party dependencies.
 
 ## 2. Core Concepts and Data Model
 
@@ -32,26 +32,37 @@ This document covers the runtime architecture, UI structure, view composition, g
 - `inProgress`, `won`, `lost`.
 
 **Letter evaluation** (`LetterState`)
-- `unused`, `absent`, `present`, `correct` (in ascending priority order).
+- `unused`, `absent`, `present`, `correct` (ascending priority).
+
+**Game mode** (`GameMode`)
+- `mini`, `junior`, `classic`, `epic`.
+- Display labels: `Pupil`, `Scribe`, `Author`, `Wordsmith`.
+- Word lengths: 3, 4, 5, 6.
+- Max guesses: 5, 6, 6, 7.
+- Word list files:
+  - Answers: `allowed-answers-3`, `allowed-answers-4`, `allowed-answers`, `allowed-answers-6`.
+  - Guesses: `allowed-guesses-3`, `allowed-guesses-4`, `allowed-guesses`, `allowed-guesses-6`.
 
 **Guess** (`Guess`)
-- `word`: the player’s submitted guess (lowercase).
-- `results`: per-letter `LetterState` values for the guess.
+- `word`: submitted guess (lowercase).
+- `results`: per-letter `LetterState` values.
 
 **History entry** (`GameHistoryEntry`)
 - `timestamp`: milliseconds since epoch.
-- `answer`: the target word used for the game.
+- `answer`: the target word.
 - `won`: boolean outcome.
-- `guesses`: array of guessed words.
-- Computed `dateString` returns `yyyy-MM-dd` from timestamp.
+- `guesses`: list of guessed words.
+- `mode`: `GameMode` (defaults to `.classic` when decoding older history).
+- `dateString`: `yyyy-MM-dd` derived from timestamp.
 
 **UI state** (`GameUiState`)
 - `isLoading`: true while word lists load.
-- `message`: user-facing transient messages.
+- `message`: transient user-facing messages.
 - `guesses`: list of `Guess` objects.
-- `currentInput`: in-progress typed word.
+- `currentInput`: active typed string.
 - `status`: `GameStatus`.
-- `maxGuesses`: 6.
+- `maxGuesses`: mode-specific.
+- `wordLength`: mode-specific.
 
 **Navigation route** (`AppRoute`)
 - `home`, `game`, `history`, `stats`, `about`, `howToPlay`.
@@ -59,264 +70,236 @@ This document covers the runtime architecture, UI structure, view composition, g
 ## 3. Word Lists and Answer Selection
 
 **Word list sources**
-- `Resources/allowed-guesses.txt` and `Resources/allowed-answers.txt` are bundled in the app.
-- If either file is missing or empty, a small in-code `fallbackWords` list is used.
+- Bundled in `Resources/`:
+  - `allowed-answers.txt`, `allowed-guesses.txt`.
+  - `allowed-answers-3.txt`, `allowed-guesses-3.txt`.
+  - `allowed-answers-4.txt`, `allowed-guesses-4.txt`.
+  - `allowed-answers-6.txt`, `allowed-guesses-6.txt`.
 
 **Filtering rules**
-- Words are lowercased, trimmed, and filtered to exactly 5 letters and alphabetic.
-- A fixed `blockedAnswers` set is applied to both guesses and answers to prevent disallowed words.
+- Words are trimmed, lowercased, alphabetic only, and length-matched to the active mode.
+- A fixed `blockedAnswers` set is removed from both guesses and answers.
 
 **Working sets**
-- `wordList`: valid guesses (allowed-guesses, filtered).
-- `answerList`: valid answers (allowed-answers, filtered).
-- `wordSet`: union of guess and answer lists for validation.
+- `wordList`: valid guesses.
+- `answerList`: valid answers.
+- `wordSet`: union of both for validation.
 
-**Answer sequence**
-- Answers are shuffled once into `answerSequence` using a seeded RNG (`SeededGenerator`).
-- The seed is persisted to `UserDefaults` and is stable across launches unless a full reset occurs.
-- `answerIndex` is persisted so the app continues through the sequence across sessions.
+**Fallback words**
+- Mode-specific fallback lists in code for 3/4/5/6 letters.
 
 ## 4. Randomness and Determinism
 
 **Seeded generator**
-- `SeededGenerator` implements `RandomNumberGenerator` with a deterministic linear congruential generator.
-- The seed defaults to `12345` if no saved seed exists.
+- `SeededGenerator` implements a deterministic LCG random generator.
+- Seed defaults to `12345` if no persisted value exists.
 
-**Sequence use**
-- On startup, answers are shuffled using the seeded generator, then consumed sequentially via `answerIndex`.
-- `startNewGame` advances the index and stores it in `UserDefaults`.
-- `fullReset` updates the seed based on the current time and reshuffles.
+**Answer sequence**
+- Answers are shuffled once per mode using the seeded generator.
+- Each mode keeps its own `answerIndex` in `UserDefaults` (`answer_index_<mode>`).
+- Mode switches load the appropriate sequence and index.
 
 ## 5. State Management and Persistence
 
 **State ownership**
 - `GameViewModel` is a `@MainActor` `ObservableObject`.
-- It exposes `@Published` properties: `state` and `history`.
+- Published properties: `state`, `history`, `currentMode`.
 
-**Persistence**
-- `history_entries_json`: JSON-encoded history array stored as a `String` in `UserDefaults`.
-- `answer_index`: integer index into the current shuffled answer sequence.
-- `random_seed`: integer seed for deterministic shuffling.
+**Persistence keys**
+- `history_entries_json`: JSON array of `GameHistoryEntry`.
+- `random_seed`: deterministic shuffle seed.
+- `current_mode`: last selected `GameMode`.
+- `answer_index_<mode>`: per-mode answer index.
 
 **Lifecycle**
-- `init` calls `loadPersistedState()` and then `loadWords()`.
-- `loadWords()` rebuilds word lists and starts a new game.
+- `init` loads persisted state, then loads words for the current mode.
 
 ## 6. Game Flow and Logic
 
 **Input handling**
-- `onKeyInput(_:)` appends a letter if game is in progress and input length < 5.
-- `onDeleteInput()` removes the last character and clears the “Not in the word list.” message if present.
+- `onKeyInput(_:)` appends a letter if in progress and input length < `state.wordLength`.
+- `onDeleteInput()` removes the last character and clears “Not in the word list.” when present.
 
 **Guess submission**
-- `submitGuess()` performs validation:
-  1. Must be in progress.
-  2. Must be exactly 5 letters.
-  3. Must exist in `wordSet`.
-- If valid, `scoreGuess(answer:guess:)` computes per-letter states.
-- Game ends on a correct guess or after 6 guesses.
-- On win or loss, a `GameHistoryEntry` is created and persisted.
+- `submitGuess()` validates:
+  1. Game in progress.
+  2. Guess length equals `state.wordLength`.
+  3. Guess exists in `wordSet`.
+- Scoring uses standard Wordle logic with correct and present evaluation passes.
+- Win ends immediately; loss occurs at `state.maxGuesses`.
+- On end, a `GameHistoryEntry` is created with `mode` and persisted.
 
 **Scoring rules**
-- First pass marks exact matches as `correct` and decrements letter counts.
-- Second pass marks remaining letters as `present` if available in the remaining counts.
-- All others stay `absent`.
-- This matches standard Wordle letter-count behavior.
+- First pass marks exact matches as `correct` and decrements counts.
+- Second pass marks remaining letters as `present` if available.
+- Otherwise `absent`.
 
 **New game**
-- `startNewGame(clearMessage:)` resets guesses and input, selects the next answer, and optionally clears the message.
-- If no answers exist, a random fallback word is used.
+- `startNewGame(clearMessage:)` advances the per-mode answer index.
+- Resets guesses/input and optionally clears the message.
 
 **Full reset**
-- Clears history and user defaults for history.
-- Regenerates a time-based seed.
-- Resets answer index and reshuffles the sequence.
-- Starts a new game and shows a “Fully reset!” message.
+- Clears history and per-mode indices.
+- Reseeds RNG based on current time.
+- Reshuffles answers and starts a new game.
+
+**Mode switching**
+- `setMode(_:)` updates:
+  - `currentMode`
+  - `state.maxGuesses`
+  - `state.wordLength`
+  - per-mode answer index
+  - word lists and answer sequence
 
 ## 7. UI Design and View Composition
 
-All UI is built in SwiftUI in `Views/WordleViews.swift`. The design intentionally mirrors the Android version mentioned in `README.md`.
+All UI is implemented in `Views/WordleViews.swift`.
 
 ### 7.1 Root and Navigation
 
 **RootView**
-- Maintains the active `AppRoute` and a `GameViewModel` as an `@StateObject`.
-- Provides a full-screen black background.
-- Switches between the main screens: Home, Game, History, Stats, About, How to Play.
-- Displays a splash screen overlay for ~2 seconds at launch.
-- Persists the last focused home menu item so returning from a menu option restores the wheel position.
+- Controls navigation via `AppRoute`.
+- Maintains `lastMenuFocusId` (default `play`) for the home wheel.
+- Shows a timed splash overlay (`SplashView`) for ~2 seconds on launch.
 
 **SplashView**
-- Full-screen black background with the title “My Wordle” in large, bold custom font.
+- Full-screen black background with title text “My Wordle”.
 
 ### 7.2 Home Screen
 
 **HomeScreen**
-- Title and subtitle: “My Wordle” and “Designed for Mr. N Sekar”.
-- Main action menu uses a vertically scrolling wheel with snapping and perspective effects.
-- Menu order is: How to Play, About, Play!, History, Statistics (Play! starts centered).
-- Tapping a menu item navigates and also stores the item as the active focus when returning.
-- Full reset flow:
-  - Tapping “Full Reset” reveals a confirmation section.
-  - “Yes” triggers `fullReset()`, then hides confirmation and shows a success message.
-  - “No, go back” cancels.
+- Title “My Wordle” and subtitle “Designed for Mr. N Sekar”.
+- Vertical menu wheel with snapping and perspective effects.
+- Menu order: How to Play, About, Play!, History, Statistics.
+- On appear, focus is forced to Play!
+
+**Play mode picker**
+- Tapping Play shows a horizontal mode wheel overlay.
+- The vertical wheel remains visible, blurred and dimmed in the background.
+- Tapping the top 30% or bottom 30% dismisses the overlay.
+- Selecting a mode starts the game immediately.
+
+**Full reset**
+- “Full Reset” reveals confirmation controls.
+- “Yes” triggers `fullReset()` and shows a success message.
 
 ### 7.3 Game Screen
 
 **WordleScreen**
-- Shows a circular `ProgressView` while `state.isLoading` is true.
-- Main layout is a scrollable vertical stack:
-  - Title “My Wordle”.
-  - `BoardView` for guesses and current input.
-  - Message banner (win/loss/validation feedback).
-  - Buttons: `Submit` and `New Game`.
-  - On-screen `KeyboardView`.
-  - `Back` button.
+- Uses fixed layout (no scroll) so board, message, keyboard, and bottom buttons remain visible.
+- Tile size computed from screen dimensions to fit the current word length and max guesses.
+- Bottom bar is pinned via `safeAreaInset` with “New Game” and “Back”.
 
 **BoardView**
-- Renders 6 rows x 5 columns.
-- Each tile shows the correct color for prior guesses or the typed letter for the current row.
-- Tile size adapts to screen dimensions within a min/max range.
+- Renders `maxRows` by `wordLength` tiles.
+- Current input is shown on the active row.
 
 **TileView**
-- Rounded rectangle with a color based on `LetterState`.
-- Text color shifts for readability based on state.
+- Color by `LetterState`:
+  - `correct`: green
+  - `present`: yellow
+  - `absent`: dark gray
+  - `unused`: darker gray
 
 **KeyboardView**
-- Three rows: `QWERTYUIOP`, `ASDFGHJKL`, `ZXCVBNM`.
-- Each key shows state-aware coloring based on the most informative state for that letter.
-- A delete key labeled `⌫` is displayed below the rows.
-
-**KeyView**
-- Plain-styled button with a rounded rectangle background and custom font.
+- Three alphabet rows plus delete (`⌫`) and submit buttons.
+- Keys colored by best known letter state.
 
 ### 7.4 History Screen
 
 **HistoryWrapper**
-- Title “History”, followed by `HistoryScreen` and a `Back` button.
+- Title “History”.
+- Content is `HistoryScreen`.
+- Back button pinned to bottom via `safeAreaInset`.
 
 **HistoryScreen**
-- A calendar-like month view for navigating dates.
-- Uses `YearMonth` to compute monthly grids and titles.
-- Days with games are highlighted.
-- Selecting a date lists the games played on that date.
-
-**HistoryCard**
-- Shows the answer word and win/loss status.
-- Tap to expand and show the list of guesses.
-- Uses a simple vertical “flexible” view to render the guesses list.
+- Calendar month view with day selection.
+- Month navigation using “‹” and “›”.
+- Mode toggles (multi-select) appear below the calendar and are centered.
+- Entry list shows only selected modes for the selected date.
+- Centered title message:
+  - If entries exist: “Games played on 26th of January”.
+  - If none: “No games played on 26th of January”.
+- Entries display answer, win/loss, and optional guesses when expanded.
 
 ### 7.5 Statistics Screen
 
 **StatsWrapper**
-- Title “Statistics”, followed by `StatsScreen` and a `Back` button.
+- Title and content are provided by `StatsScreen`.
+- Back button pinned to bottom via `safeAreaInset`.
 
 **StatsScreen**
-- If no history exists, shows “No games yet.”
-- Otherwise shows:
-  - Games played count.
-  - Win percentage (one decimal).
-  - Guess distribution for 1 to 6 guesses.
-- The distribution is rendered as bars whose color interpolates between two greens based on counts.
+- Mode toggles are single-select and larger font.
+- Default state: no mode selected.
+  - Title and toggles are centered vertically.
+- When a mode is selected:
+  - Title and toggles move to the top.
+  - Stats and histogram render below, centered in available space.
+- Histogram range adapts to selected mode’s max guesses.
 
-### 7.6 About Screen
+### 7.6 About and How To Play
 
-**AboutWrapper**
-- Displays whimsical, brief copy as a vertical wheel.
-- The wheel focus point is near the top, so the most in-focus sentence sits at the top.
-- Includes a Back button separated from the copy block for visual breathing room.
+**About**
+- Short, kid‑friendly copy presented in a vertical wheel.
+- Includes game description, ranks, and what ranks mean.
 
-### 7.7 How to Play Screen
+**How To Play**
+- Short, kid‑friendly steps in a vertical wheel.
+- Explains ranks and letter counts.
+- Color explanations are on separate lines using “=>”.
+- Ends with “Good luck!”.
 
-**HowToPlayWrapper**
-- Shows concise, humorous instructions as a vertical wheel of sentences.
-- The wheel focus point is near the top, allowing users to scroll down for more lines and back up.
-- Includes a Back button separated from the copy block.
+## 8. Menu Wheel Components
 
-## 8. Styling and Theme
+**MenuWheelView (vertical)**
+- Snapping vertical list with perspective scale, opacity, blur, and rotation.
+- Focus aligns to a configurable focus point.
 
-**Global look**
-- Dark theme with black background.
-- Bright accent colors and bold typography.
+**HorizontalWheelView (mode picker)**
+- Snapping horizontal list with similar effects.
+- Used for mode selection (Pupil/Scribe/Author/Wordsmith).
 
-**Colors**
-- Correct: green (`#22C55E`).
-- Present: amber (`#F59E0B`).
-- Absent: dark gray (`#1F2937`).
-- Unused: near-black (`#111827`).
-- Additional reds for losses and muted grays for secondary text.
+## 9. Fonts and Visual Style
 
 **Fonts**
-- Custom Merriweather family in multiple weights and sizes.
-- Defined in `Info.plist` and used via `.custom()` font builders.
+- Merriweather 24pt variants loaded via `UIAppFonts` in `Info.plist`.
+- Title, section, body, caption, and tile fonts are custom.
 
-**Buttons**
-- `InvertibleOutlineButton` is text-only with no rectangular outlines and a subtle pressed opacity.
+**Colors**
+- Black background throughout.
+- Green/yellow/gray tiles consistent with Wordle conventions.
 
-## 9. User Interaction Details
+## 10. Assets
 
-**Input**
-- Players use on-screen keyboard only; no system keyboard is attached.
-- Key taps append letters; `⌫` deletes.
-- `Submit` attempts a guess.
+**App icon**
+- Stored in `Resources/Assets.xcassets/AppIcon.appiconset`.
+- App icon set includes all required iOS sizes.
+- Uses the provided 1024×1024 source, slightly zoomed/cropped for better prominence.
 
-**Messaging**
-- Validation messages show for missing length or invalid word list entries.
-- Win/loss messages include the correct answer.
-- `New Game` clears the message and starts a new round.
+**Splash**
+- No custom launch storyboard is used.
+- `Info.plist` uses an empty `UILaunchScreen` dictionary.
 
-**Navigation**
-- All navigation is in-app via button presses that swap the `AppRoute` in `RootView`.
-- There is no navigation stack or deep linking.
+## 11. User Interaction Summary
 
-## 10. Utility and Support Code
+**Primary flow**
+- Home → Play → Mode picker → Game.
 
-**Safe indexing**
-- `Collection+Safe` adds `subscript(safe:)` for out-of-bounds-safe access.
-- Used by the board to avoid index crashes.
+**History flow**
+- Home → History → calendar + mode filters → entries.
 
-**String indexing**
-- A private `String` extension in `WordleViews.swift` provides safe character access by index.
+**Stats flow**
+- Home → Statistics → select a mode → view stats and histogram.
 
-**Color interpolation**
-- A private `Color.interpolate` helper generates smooth bar colors in statistics.
+**Reset flow**
+- Home → Full Reset → confirmation → state cleared and reshuffled.
 
-## 11. Offline-Only Behavior
+## 12. File Map
 
-**No network**
-- All assets, word lists, and logic are bundled.
-- There are no API calls, analytics, or remote configuration.
-
-## 12. Build and Runtime Constraints
-
-**Supported orientation**
-- Portrait only, as specified in `Info.plist`.
-
-**Scene**
-- Single-scene app (`UIApplicationSupportsMultipleScenes` is false).
-
-## 13. Feature Checklist (As Implemented)
-
-- Home screen with a wheel menu (How to Play, About, Play!, History, Statistics).
-- Splash screen on launch.
-- Wordle gameplay with 6 guesses and 5-letter words.
-- On-screen keyboard with letter-state coloring.
-- Win/loss messaging.
-- New game flow.
-- Full reset flow with confirmation.
-- History calendar and expandable game cards.
-- Statistics with win rate and guess distribution.
-- About screen with wheel-scrolling copy.
-- How to Play screen with wheel-scrolling instructions.
-- Persistent history and deterministic answer sequence.
-- Offline word lists and custom fonts.
-
-## 14. Known Non-Features (Not Implemented)
-
-These features are intentionally not present in the current codebase.
-- No hint system.
-- No daily puzzle tied to the calendar date.
-- No sharing results.
-- No animations beyond the splash fade.
-- No login or cloud sync.
-- No accessibility configuration beyond default SwiftUI behavior.
+- `ios/Wordle/Wordle/WordleApp.swift` – app entry point.
+- `ios/Wordle/Wordle/Views/WordleViews.swift` – all SwiftUI screens and components.
+- `ios/Wordle/Wordle/ViewModels/GameViewModel.swift` – gameplay logic and persistence.
+- `ios/Wordle/Wordle/Models/GameModels.swift` – game data types and modes.
+- `ios/Wordle/Wordle/Resources/Assets.xcassets` – app icon assets.
+- `ios/Wordle/Wordle/Resources/*.txt` – word lists.
+- `ios/Wordle/Wordle/Info.plist` – fonts, launch configuration.
