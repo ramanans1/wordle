@@ -50,6 +50,118 @@ INTERJECTIONS = {
 }
 
 ARCHAIC = {"thee", "thou", "thy", "hath", "doth", "shalt", "whilst", "unto", "ye", "art", "hast", "ere"}
+
+# Answer-only filters for short, kid-friendly words.
+ANSWER_INTERJECTIONS = {
+    "agh", "ahh", "ahem", "ahhh", "argh", "blah", "boo", "beep", "erm", "mmm", "nah", "ohh", "ohhh", "oooh",
+    "psst", "shh", "shhh", "ugh", "uhh", "umm", "unh", "wow", "yah", "yay", "yep", "yea",
+}
+
+ANSWER_NONLEXICAL = {
+    "aii", "iii",
+}
+
+ANSWER_ABBREVIATIONS = {
+    "asap", "ceo", "etc", "iot", "mrs", "sec", "seo", "pro", "sub", "cctv",
+}
+
+ANSWER_FOREIGN = {
+    "aye", "bon", "eun", "oui", "que", "raj", "jai", "jin", "tae", "rio", "san",
+    "bien", "ciao", "casa", "bhai", "feng",
+}
+
+ANSWER_COLLOQUIAL = {
+    "aye", "nah", "yah", "yea", "yep", "dawg", "dude", "dope", "dork", "bout",
+}
+
+ANSWER_FRAGMENTS = {
+    "isn", "til", "wha", "tha", "aren", "cant", "dont", "didn", "doin", "areyou", "couldn", "wouldn",
+}
+
+ANSWER_NAMES = {
+    "jax", "lex", "rio", "raj", "jin", "jai", "tae",
+}
+
+ANSWER_AMBIGUOUS = {
+    "pub", "bra", "bro", "spa",
+}
+
+ANSWER_SENSITIVE = {
+    # bodily functions / insults / violence / substances
+    "bomb", "bums", "cult", "dead", "doom", "dumb", "dung", "fart", "feds", "guns", "hate", "kill", "poop", "puke",
+    "abused", "addict", "badass", "battle", "bloods", "bloody", "bodies", "corpse", "damned", "drunks", "killer",
+    "morons", "murder", "poison", "pooped", "stupid", "terror", "weapon",
+}
+
+ANSWER_MANUAL_BLOCK = {
+    # 3-letter manual removals
+    "ain", "die", "doc", "doo", "med", "non", "pee", "sin", "yen",
+    # 4-letter manual removals
+    "afar", "aahs", "ammo", "arab", "blog", "both", "choi", "cuba", "daft", "data", "demo", "disc", "disk", "dorm",
+    "duct", "envy", "epic", "euro", "exam", "feet", "folk", "foul", "fury", "gang", "geez", "goin", "gosh", "guru",
+    "had", "n", "hasn", "hari", "heil", "hell", "hiya", "hyah", "hyun", "iife", "iike", "info", "into", "iove",
+    "iraq", "iowa", "jail", "jerk", "junk", "kang", "kitt", "lapd", "limo", "lire", "mein", "memo", "mold", "mutt",
+    "mwah", "nder", "nope", "nypd", "oath", "ohio", "omen", "oppa", "oral", "perp", "peru", "phew", "posh", "prep",
+    "prom", "punk", "quiz", "quid", "raja", "raju", "reno", "riot", "scam", "scum", "shan", "shot", "sire", "slay",
+    "some", "stab", "thug", "thud", "thus", "ting", "tong", "toto", "turd", "unit", "upon", "user", "vain", "vent",
+    "vega", "vibe", "void", "was", "whew", "whoo", "wimp", "with", "woof", "xiao", "yang", "yeah", "yeon", "ying",
+    "yoon", "yuck", "yuki", "yuan", "zhao", "zoey",
+    # 6-letter manual removals
+    "abduct", "accuse", "aditya", "afghan", "alaska", "albany", "alvaro", "amazon", "ambush", "annika", "arabia",
+    "arabic", "arctic", "armani", "armory", "armpit", "arouse", "arkady", "attack", "attila", "auggie", "avenge",
+    "bandit", "banish", "barack", "barbed", "bashir", "baltic", "beirut", "bengal", "betcha", "bieber", "biggie",
+    "bikini", "blimey", "bodily", "bojack", "bombay", "bombed", "bomber", "borgia", "bosnia", "boston", "brando",
+    "brazil", "bullet", "cahill", "callen", "callin", "canton", "carnal", "cartel", "cayman", "chandi", "chandu",
+    "chanel", "charly", "chopin", "christ", "climax", "cognac", "combat", "corset", "cortez", "crotch", "crusoe",
+    "cursed", "daimon", "dakota", "dancin", "dagger", "danube", "darlin", "deadly", "deepak", "defeat", "denzel",
+    "detain", "dharma", "diablo", "diaper", "disarm", "disney", "dosage", "dooley", "donner", "drivin", "duress",
+    "dunbar", "eiffel", "eureka", "europe", "fallin", "farnon", "farted", "fawlty", "feelin", "felony", "filthy",
+    "figaro", "forbid", "forged", "forman", "forthe", "foryou", "franco", "fresno", "fuhrer", "gandhi", "ganesh",
+    "gaulle", "geisha", "ghetto", "gettin", "google", "gotcha", "gotham", "grammy", "greece", "guinea", "guilty",
+    "gunman", "gunmen", "gunned", "hahaha", "hangin", "harass", "harlot", "hatred", "havana", "hawaii", "hearst",
+    "hefner", "hernia", "hikaru", "hitman", "hitomi", "holdin", "holdup", "hooray", "hurrah", "hurray", "hottie",
+    "iittle", "indian", "injure", "injury", "inmate", "invade", "jailed", "jailer", "jagger", "jawohl", "jekyll",
+    "jewish", "jonesy", "joseon", "julien", "jumong", "kaylie", "keaton", "keepin", "keisha", "kepler",
+    "kerala", "kidnap", "kiddin", "killed", "killin", "kimchi", "kimono", "kisser", "kickin", "kraang", "krusty",
+    "kosovo", "kuwait", "leavin", "lethal", "liquor", "lisbon", "lookie", "lookin", "lookit", "louvre", "luthor",
+    "madrid", "maggot", "makoto", "malibu", "manila", "mannix", "manure", "marple", "martyr", "messin", "mexico",
+    "morbid", "mormon", "morgue", "mornin", "mortar", "mosque", "mossad", "mstoll", "mulder", "mumbai", "munich",
+    "musket", "muzzle", "naruto", "nassau", "neelix", "newark", "nikhil", "noriko", "nothin", "norway", "occult",
+    "oregon", "ortega", "oughta", "pacino", "pawnee", "peeing", "peking", "pelvic", "perish", "persia", "petrov",
+    "phaser", "picard", "pilate", "pimple", "pirate", "pistol", "plague", "playin", "poirot", "popeye", "prague",
+    "pratap", "prenup", "prison", "probst", "psycho", "puerto", "punish", "punjab", "puking", "pusher", "puttin",
+    "quebec", "racism", "racist", "rajesh", "ramesh", "ramiro", "rashid", "raylan", "reno", "renoir", "revoir",
+    "righto", "righty", "ritual", "robbed", "robber", "rockin", "romero", "rommel", "rommie", "roxton", "runnin",
+    "rupaul", "saigon", "sachin", "saddam", "sakura", "salaam", "sameer", "sasaki", "saturn", "scotch", "scooby",
+    "senora", "sensei", "serbia", "sergey", "sewage", "shakin", "sheikh", "sicily", "singin", "sinbad", "sittin",
+    "slayer", "sleazy", "smoked", "smoker", "smokey", "smokin", "sniper", "snitch", "soviet", "spleen",
+    "stalin", "stayin", "stewie", "stolen", "strike", "struck", "suarez", "summat", "sultan", "sunbae", "sutter",
+    "suzuki", "sweden", "syrian", "takeda", "takumi", "taelon", "tahiti", "taipei", "taiwan", "talkin", "tampon",
+    "tehran", "tellin", "threat", "thrash", "tigger", "tinkle", "tintin", "tissue", "toledo", "toilet",
+    "topher", "toyota", "trauma", "tucson", "tycoon", "tyrant", "uganda", "undead", "unholy", "verona", "vienna",
+    "viktor", "vikram", "victim", "vishal", "vishnu", "voight", "vulcan", "vulgar", "warsaw", "waitin",
+    "weirdo", "weller", "whisky", "whoosh", "woulda", "workin", "xander", "yakuza", "yamada", "yamato", "yippee",
+    "zodiac", "zombie", "zordon", "zurich",
+    "booger", "breast", "coulda", "hijack", "hobson", "moreau", "ofyour",
+}
+
+ANSWER_BLOCK = (
+    ANSWER_INTERJECTIONS
+    | ANSWER_NONLEXICAL
+    | ANSWER_ABBREVIATIONS
+    | ANSWER_FOREIGN
+    | ANSWER_COLLOQUIAL
+    | ANSWER_FRAGMENTS
+    | ANSWER_NAMES
+    | ANSWER_AMBIGUOUS
+    | ANSWER_SENSITIVE
+    | ANSWER_MANUAL_BLOCK
+)
+
+# Words that end with "s" but are not plural forms.
+NON_PLURAL_S = {
+    "as", "is", "was", "his", "its", "this", "thus", "us", "yes", "gas", "bus",
+}
 SAFE_RE = re.compile(r"^[a-z]+$")
 
 
@@ -104,6 +216,20 @@ def is_kid_safe_candidate(word: str, blocked: set[str], names: set[str]) -> bool
     return True
 
 
+def is_kid_friendly_answer(word: str) -> bool:
+    if word in ANSWER_BLOCK:
+        return False
+    # Reject non-lexical patterns commonly seen in short interjections.
+    if not re.search(r"[aeiouy]", word):
+        return False
+    if re.search(r"(.)\\1\\1", word):
+        return False
+    # Remove plural/3rd-person forms ending in "s" for kid-friendly answers.
+    if word.endswith("s") and not word.endswith("ss") and word not in NON_PLURAL_S:
+        return False
+    return True
+
+
 def main() -> None:
     print("Downloading source lists...")
     dwyl = parse_word_lines(fetch(SOURCES["dwyl"]))
@@ -135,7 +261,9 @@ def main() -> None:
         answers = {
             w
             for w in guesses
-            if w in freq_rank and freq_rank[w] <= answer_rank_threshold[length]
+            if w in freq_rank
+            and freq_rank[w] <= answer_rank_threshold[length]
+            and is_kid_friendly_answer(w)
         }
 
         # safety: answers must be subset of guesses.
