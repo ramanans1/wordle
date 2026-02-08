@@ -427,10 +427,15 @@ struct HistoryWrapper: View {
         VStack {
             Text("History").font(appSectionTitleFont).foregroundColor(.white)
             HistoryScreen(entries: viewModel.history)
-            InvertibleOutlineButton(label: "Back", action: onBack, borderColor: .gray)
         }
         .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.black)
+        .safeAreaInset(edge: .bottom) {
+            InvertibleOutlineButton(label: "Back", action: onBack, borderColor: .gray)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
+        }
     }
 }
 
@@ -446,6 +451,7 @@ struct HistoryScreen: View {
         let entriesByDate = Dictionary(grouping: filteredEntries) { $0.dateString }
         let selectedKey = Self.dateString(selectedDate)
         let selectedEntries = entriesByDate[selectedKey] ?? []
+        let formattedDate = Self.formattedDateWithOrdinal(selectedDate)
 
         VStack(alignment: .leading) {
             HStack {
@@ -493,11 +499,15 @@ struct HistoryScreen: View {
                 }
             )
             .padding(.bottom, 8)
+            .frame(maxWidth: .infinity, alignment: .center)
 
-            Text("Games on \(selectedKey)").foregroundColor(.white).font(appBodyBoldFont)
+            Text(selectedEntries.isEmpty ? "No games played on \(formattedDate)" : "Games played on \(formattedDate)")
+                .foregroundColor(.white)
+                .font(appBodyBoldFont)
+                .frame(maxWidth: .infinity, alignment: .center)
 
             if selectedEntries.isEmpty {
-                Text("No games played.").foregroundColor(.gray).font(appBodyFont)
+                EmptyView()
             } else {
                 ScrollView {
                     VStack(spacing: 8) {
@@ -516,6 +526,26 @@ struct HistoryScreen: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+
+    static func formattedDateWithOrdinal(_ date: Date) -> String {
+        let day = Calendar.current.component(.day, from: date)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "LLLL"
+        let month = formatter.string(from: date)
+        let suffix: String
+        let tens = (day % 100) / 10
+        if tens == 1 {
+            suffix = "th"
+        } else {
+            switch day % 10 {
+            case 1: suffix = "st"
+            case 2: suffix = "nd"
+            case 3: suffix = "rd"
+            default: suffix = "th"
+            }
+        }
+        return "\(day)\(suffix) of \(month)"
     }
 }
 
