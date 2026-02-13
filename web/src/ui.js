@@ -15,6 +15,7 @@ const uiLocal = {
   focusedModeId: "mini",
   showConfirm: false,
   resetMessage: null,
+  wheelScroll: {},
   history: {
     displayedMonth: currentYearMonth(),
     selectedDate: new Date(),
@@ -99,6 +100,10 @@ export function renderApp({ app, state, store }) {
       axis: "y",
       focusFraction: 0.5,
       rowHeight: 56,
+      initialScroll: uiLocal.wheelScroll["home-wheel"],
+      onScroll: (value) => {
+        uiLocal.wheelScroll["home-wheel"] = value;
+      },
       onFocus: (id) => {
         uiLocal.focusedMenuId = id;
       },
@@ -647,7 +652,10 @@ function initKeyboard({ app, store, state }) {
   window.addEventListener("keydown", keyHandler);
 }
 
-function initWheel(id, { axis, focusFraction, rowHeight, itemWidth, onFocus, onSelect } = {}) {
+function initWheel(
+  id,
+  { axis, focusFraction, rowHeight, itemWidth, onFocus, onSelect, initialScroll, onScroll } = {}
+) {
   const container = document.getElementById(id);
   if (!container) return;
 
@@ -750,6 +758,9 @@ function initWheel(id, { axis, focusFraction, rowHeight, itemWidth, onFocus, onS
   container.addEventListener("scroll", () => {
     updateStyles();
     scheduleSnap();
+    if (onScroll) {
+      onScroll(axis === "x" ? container.scrollLeft : container.scrollTop);
+    }
   });
 
   container.addEventListener(
@@ -852,7 +863,15 @@ function initWheel(id, { axis, focusFraction, rowHeight, itemWidth, onFocus, onS
   resizeObserver.observe(container);
 
   updateStyles();
-  scrollToId(focusId, false);
+  if (typeof initialScroll === "number") {
+    if (axis === "x") {
+      container.scrollLeft = initialScroll;
+    } else {
+      container.scrollTop = initialScroll;
+    }
+  } else {
+    scrollToId(focusId, false);
+  }
   updateStyles();
 }
 
