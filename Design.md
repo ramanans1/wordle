@@ -427,6 +427,8 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - Full‑screen viewport (no page scrolling).
 - Screen panels are swapped by route; only one is visible at a time.
 - Bottom bars are in‑flow and always visible without scrolling.
+- Safe‑area insets are respected to avoid browser chrome overlap.
+- Spacing uses viewport‑scaled clamps for phone/tablet balance.
 
 **Splash**
 - Full‑screen “My Wordle” overlay shown for ~2 seconds on startup.
@@ -435,18 +437,19 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - Title and subtitle top‑aligned.
 - Vertical menu wheel: How to Play, About, Play!, History, Statistics.
 - “Play!” opens a horizontal mode picker overlay.
-- Full Reset reveals confirmation UI and a success message.
+- Full Reset is a menu item in the wheel; confirmation UI and success message appear below.
 - When mode picker is open, the vertical wheel is softly blurred and dimmed.
 
 **Mode picker**
 - Horizontal wheel with Pupil/Scribe/Author/Wordsmith.
 - Tap top/bottom 30% of overlay to dismiss.
 - Selecting a mode immediately starts a game and navigates to Game screen.
+- Opens focused on the current mode.
 
 **Game**
 - Fixed layout: title → board → message → keyboard → bottom bar.
 - Tile sizing adapts to viewport and mode.
-- Bottom bar: “New Game” and “Back”.
+- Bottom bar: “New Game” only (back via swipe/arrow).
 
 **Keyboard**
 - Three letter rows plus Delete and Submit.
@@ -461,22 +464,31 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
   - Empty days: gray.
 - Mode toggles are multi‑select (filter).
 - Entry cards expand to show guesses.
+- Back navigation via swipe and arrow cue only.
 
 **Stats**
 - Mode toggles are single‑select.
 - No selection: centered title and toggles.
 - With selection: stats and histogram render.
 - Histogram bars use a green gradient and per‑mode max guesses.
+- Back navigation via swipe and arrow cue only.
 
 **About / How To Play**
 - Vertical wheel with iOS‑matching copy.
 - Centered wheel spacing between title and Back button.
+- Back navigation via swipe and arrow cue only.
 
 **Wheel behavior**
 - Scrollable containers with perspective scaling, opacity, blur, and rotation.
 - Snap‑to‑nearest after scroll with a 150ms delay.
 - Supports trackpad/mouse wheel scrolling and pointer drag.
 - Click/tap selects and snaps to the focused item.
+- Touch devices use a longer snap delay to reduce bounce.
+- Scroll position for the home wheel is restored on return.
+
+**Swipe navigation**
+- Swipe right on any subpage returns to Home.
+- Visual arrow cue appears only on subpages (left edge only).
 
 ## H. Input and Accessibility
 
@@ -503,6 +515,8 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - Example: `BASE_PATH="/wordle/" npm run build`.
 - Static assets use relative/BASE_URL paths.
 - `scripts/deploy-gh-pages.sh` builds and deploys via a temporary `gh-pages` worktree.
+- GitHub Actions workflow auto‑deploys on push to `main`.
+- `.nojekyll` is included to prevent asset mangling.
 
 **Ignored artifacts**
 - `web/node_modules/` and `web/dist/` are ignored in `.gitignore`.

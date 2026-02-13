@@ -504,7 +504,7 @@ function bindHome({ app, state, store }) {
     const id = item.dataset.id;
     uiLocal.focusedMenuId = id;
     if (id === "play") {
-      uiLocal.focusedModeId = GameModes[0].id;
+      uiLocal.focusedModeId = state.currentMode ?? GameModes[0].id;
       uiLocal.showModePicker = true;
       store.notify();
       return;
@@ -771,7 +771,7 @@ function initWheel(
 
   let snapTimer = null;
 
-  const snapToNearest = () => {
+  const getNearestId = () => {
     const containerRect = container.getBoundingClientRect();
     const focusPoint = axis === "x"
       ? containerRect.left + containerRect.width * focusFraction
@@ -790,12 +790,15 @@ function initWheel(
       }
     });
 
-    if (nearest) {
-      const idToFocus = nearest.dataset.id;
-      container.dataset.focus = idToFocus;
-      onFocus?.(idToFocus);
-      scrollToId(idToFocus, true);
-    }
+    return nearest ? nearest.dataset.id : null;
+  };
+
+  const snapToNearest = () => {
+    const idToFocus = getNearestId();
+    if (!idToFocus) return;
+    container.dataset.focus = idToFocus;
+    onFocus?.(idToFocus);
+    scrollToId(idToFocus, true);
   };
 
   const scheduleSnap = () => {
@@ -804,11 +807,16 @@ function initWheel(
     }
     snapTimer = setTimeout(() => {
       snapToNearest();
-    }, 150);
+    }, isTouchDevice() ? 260 : 150);
   };
 
   container.addEventListener("scroll", () => {
     updateStyles();
+    const idToFocus = getNearestId();
+    if (idToFocus) {
+      container.dataset.focus = idToFocus;
+      onFocus?.(idToFocus);
+    }
     scheduleSnap();
     if (onScroll) {
       onScroll(axis === "x" ? container.scrollLeft : container.scrollTop);
@@ -955,6 +963,10 @@ function computeTileSize(state) {
   const maxTile = isTabletPortrait ? 82 : 68;
   const minTile = isTabletPortrait ? 36 : 32;
   return Math.min(maxTile, Math.max(minTile, Math.min(widthSize, heightSize)));
+}
+
+function isTouchDevice() {
+  return typeof navigator !== "undefined" && (navigator.maxTouchPoints ?? 0) > 0;
 }
 
 function interpolateColor(from, to, factor) {

@@ -155,6 +155,7 @@ button {
   touch-action: pan-y;
   overscroll-behavior: contain;
   cursor: grab;
+  -webkit-overflow-scrolling: touch;
 }
 
 .wheel::-webkit-scrollbar {
@@ -335,6 +336,7 @@ button {
   touch-action: pan-x;
   overscroll-behavior: contain;
   cursor: grab;
+  -webkit-overflow-scrolling: touch;
 }
 
 .wheel.dragging,
