@@ -216,7 +216,8 @@ function renderGame(state) {
 
   const tileSize = computeTileSize(state.ui);
   const isTabletPortrait = window.innerWidth >= 700 && window.innerHeight > window.innerWidth;
-  const isLargeKeyboard = window.innerWidth >= 900 && !isTabletPortrait;
+  const isIpadLandscape = window.innerWidth >= 1024 && window.innerWidth <= 1366 && window.innerHeight <= 1024;
+  const isLargeKeyboard = window.innerWidth >= 1200 && !isTabletPortrait && !isIpadLandscape;
   const board = renderBoard(state, tileSize);
   const message = state.ui.message
     ? `<div class="message ${state.ui.status}">${state.ui.message}</div>`

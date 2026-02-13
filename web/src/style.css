@@ -928,10 +928,10 @@ button {
 
 @media (min-width: 900px) and (orientation: landscape) {
   :root {
-    --bottom-lift: clamp(18px, 3vh, 32px);
+    --bottom-lift: clamp(24px, 4vh, 40px);
   }
 
   .game-screen {
-    padding-bottom: 16px;
+    padding-bottom: 20px;
   }
 }
