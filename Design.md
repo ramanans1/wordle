@@ -429,6 +429,7 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - Bottom bars are in‑flow and always visible without scrolling.
 - Safe‑area insets are respected to avoid browser chrome overlap.
 - Spacing uses viewport‑scaled clamps for phone/tablet balance.
+- iPad‑specific layout tweaks reduce keyboard/tile size in short landscape and lift bottom controls.
 
 **Splash**
 - Full‑screen “My Wordle” overlay shown for ~2 seconds on startup.
@@ -445,6 +446,7 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - Tap top/bottom 30% of overlay to dismiss.
 - Selecting a mode immediately starts a game and navigates to Game screen.
 - Opens focused on the current mode.
+- Horizontal wheel uses CSS scroll‑snap with `proximity` for native momentum.
 
 **Game**
 - Fixed layout: title → board → message → keyboard → bottom bar.
@@ -485,6 +487,7 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - Click/tap selects and snaps to the focused item.
 - Touch devices use a longer snap delay to reduce bounce.
 - Scroll position for the home wheel is restored on return.
+- Horizontal wheel snap is handled by CSS scroll‑snap (JS snap disabled for axis `x`).
 
 **Swipe navigation**
 - Swipe right on any subpage returns to Home.
@@ -517,6 +520,10 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - `scripts/deploy-gh-pages.sh` builds and deploys via a temporary `gh-pages` worktree.
 - GitHub Actions workflow auto‑deploys on push to `main`.
 - `.nojekyll` is included to prevent asset mangling.
+
+**Icons and previews**
+- `web/public/icons/icon.png` used for favicon and social previews.
+- Open Graph and Twitter meta tags include absolute URLs for the icon.
 
 **Ignored artifacts**
 - `web/node_modules/` and `web/dist/` are ignored in `.gitignore`.
