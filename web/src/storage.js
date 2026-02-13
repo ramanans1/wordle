@@ -1,6 +1,7 @@
 const historyKey = "history_entries_json";
 const randomSeedKey = "random_seed";
 const modeKey = "current_mode";
+const currentGameKeyPrefix = "current_game_";
 
 const storage = {
   getHistory() {
@@ -32,6 +33,22 @@ const storage = {
   setSeed(seed) {
     localStorage.setItem(randomSeedKey, String(seed));
   },
+  getCurrentGame(mode) {
+    const raw = localStorage.getItem(currentGameKey(mode));
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch (error) {
+      return null;
+    }
+  },
+  setCurrentGame(mode, game) {
+    localStorage.setItem(currentGameKey(mode), JSON.stringify(game));
+  },
+  clearCurrentGame(mode) {
+    localStorage.removeItem(currentGameKey(mode));
+  },
   getAnswerIndex(mode) {
     const raw = localStorage.getItem(answerIndexKey(mode));
     const value = Number(raw);
@@ -44,6 +61,11 @@ const storage = {
     localStorage.removeItem(historyKey);
     localStorage.removeItem(randomSeedKey);
     localStorage.removeItem(modeKey);
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith(currentGameKeyPrefix)) {
+        localStorage.removeItem(key);
+      }
+    });
   },
   clearAnswerIndices(modes) {
     modes.forEach((mode) => {
@@ -54,6 +76,10 @@ const storage = {
 
 function answerIndexKey(mode) {
   return `answer_index_${mode}`;
+}
+
+function currentGameKey(mode) {
+  return `${currentGameKeyPrefix}${mode}`;
 }
 
 export { storage };

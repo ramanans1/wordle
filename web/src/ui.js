@@ -39,6 +39,7 @@ export function renderApp({ app, state, store }) {
   app.innerHTML = renderShell(state);
 
   bindGlobalActions({ app, state, store });
+  initTouchGuards({ app });
   initSwipeNavigation({ app, state, store });
 
   if (state.route === Routes.home) {
@@ -170,6 +171,11 @@ function renderHome(state) {
     `
     : "";
 
+  const resumeVisible = Boolean(state.showResume);
+  const resumeModes = new Set(resumeVisible ? state.resumeModes ?? [] : []);
+  const hasResume = resumeVisible && resumeModes.size > 0;
+  const playLabel = hasResume ? "Continue" : "Play!";
+
   const modeOverlay = uiLocal.showModePicker
     ? `
       <div class="mode-overlay">
@@ -177,7 +183,13 @@ function renderHome(state) {
         <div class="mode-dismiss" data-action="mode-dismiss" data-zone="bottom"></div>
         <div class="mode-wheel" id="mode-wheel" data-focus="${uiLocal.focusedModeId}">
           <div class="wheel-track horizontal">
-            ${GameModes.map((mode) => renderWheelItem(mode.label, mode.id)).join("")}
+            ${GameModes.map((mode) => {
+              const isResume = resumeVisible && resumeModes.has(mode.id);
+              return renderWheelItem(mode.label, mode.id, {
+                tag: isResume ? "Continue" : null,
+                className: isResume ? "resume" : "",
+              });
+            }).join("")}
           </div>
         </div>
       </div>
@@ -194,7 +206,7 @@ function renderHome(state) {
         <div class="wheel-track vertical">
           ${renderWheelItem("How to Play", "howto")}
           ${renderWheelItem("About", "about")}
-          ${renderWheelItem("Play!", "play")}
+          ${renderWheelItem(playLabel, "play", { className: hasResume ? "resume" : "" })}
           ${renderWheelItem("History", "history")}
           ${renderWheelItem("Statistics", "stats")}
           ${renderWheelItem("Full Reset", "reset")}
@@ -466,8 +478,17 @@ function renderHowToPlay() {
   `;
 }
 
-function renderWheelItem(title, id) {
-  return `<button class="wheel-item" data-id="${id}">${title}</button>`;
+function renderWheelItem(title, id, options = {}) {
+  const { tag, className } = options;
+  const classes = ["wheel-item"];
+  if (className) classes.push(className);
+  if (tag) classes.push("has-tag");
+  return `
+    <button class="${classes.join(" ")}" data-id="${id}">
+      ${tag ? `<span class="wheel-tag">${tag}</span>` : ""}
+      <span class="wheel-title">${title}</span>
+    </button>
+  `;
 }
 
 function renderModeToggles(selectedModes) {
@@ -574,10 +595,15 @@ function bindGame({ app, state, store }) {
 function initSwipeNavigation({ app, state, store }) {
   const root = app.querySelector(".app-root");
   if (!root) return;
+  if (root.dataset.swipeBound === "true") return;
+  root.dataset.swipeBound = "true";
 
   let startX = 0;
   let startY = 0;
   let active = false;
+  const edgeThreshold = 28;
+  const minDistance = 90;
+  const verticalTolerance = 35;
 
   const shouldIgnore = (target) => {
     return Boolean(target.closest(".wheel") || target.closest(".keyboard") || target.closest(".history-list"));
@@ -586,6 +612,7 @@ function initSwipeNavigation({ app, state, store }) {
   root.addEventListener("touchstart", (event) => {
     if (event.touches.length !== 1) return;
     if (shouldIgnore(event.target)) return;
+    if (event.touches[0].clientX > edgeThreshold) return;
     active = true;
     startX = event.touches[0].clientX;
     startY = event.touches[0].clientY;
@@ -598,7 +625,10 @@ function initSwipeNavigation({ app, state, store }) {
     const endY = event.changedTouches[0].clientY;
     const deltaX = endX - startX;
     const deltaY = endY - startY;
-    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) {
+    if (Math.abs(deltaX) < minDistance) {
+      return;
+    }
+    if (Math.abs(deltaY) > verticalTolerance && Math.abs(deltaX) < Math.abs(deltaY) * 1.1) {
       return;
     }
     if (deltaX > 0 && state.route !== Routes.home) {
@@ -606,6 +636,27 @@ function initSwipeNavigation({ app, state, store }) {
       store.notify();
     }
   });
+}
+
+function initTouchGuards({ app }) {
+  const root = app.querySelector(".app-root");
+  if (!root) return;
+  if (root.dataset.touchGuardBound === "true") return;
+  root.dataset.touchGuardBound = "true";
+
+  let lastTouchEnd = 0;
+  root.addEventListener(
+    "touchend",
+    (event) => {
+      if (event.touches.length > 0) return;
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    },
+    { passive: false }
+  );
 }
 
 function bindHistory({ app, state, store }) {

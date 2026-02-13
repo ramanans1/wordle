@@ -22,6 +22,8 @@ export function createGameStore(baseUrl) {
       currentMode: DefaultMode,
       route: "home",
       splashVisible: true,
+      resumeModes: [],
+      showResume: false,
     },
     wordList: [],
     answerList: [],
@@ -42,6 +44,7 @@ export function createGameStore(baseUrl) {
 
     async init() {
       store.loadPersistedState();
+      store.refreshResumeModes();
       await store.setMode(store.state.currentMode, { startGame: false });
       store.state.splashVisible = true;
       store.notify();
@@ -52,6 +55,8 @@ export function createGameStore(baseUrl) {
     },
 
     async setMode(modeId, { startGame = true } = {}) {
+      const previousMode = store.state.currentMode;
+      store.persistCurrentGame(previousMode);
       const mode = GameModes.find((item) => item.id === modeId) ?? GameModes[0];
       store.state.currentMode = mode.id;
       storage.setMode(mode.id);
@@ -72,6 +77,8 @@ export function createGameStore(baseUrl) {
         0,
         store.state.ui.wordLength
       );
+      store.markResumeVisible();
+      store.persistCurrentGame();
       store.notify();
     },
 
@@ -82,6 +89,8 @@ export function createGameStore(baseUrl) {
         store.state.ui.message = null;
       }
       store.state.ui.currentInput = store.state.ui.currentInput.slice(0, -1);
+      store.markResumeVisible();
+      store.persistCurrentGame();
       store.notify();
     },
 
@@ -124,6 +133,7 @@ export function createGameStore(baseUrl) {
       store.state.ui.status = status;
       store.state.ui.currentInput = "";
       store.state.ui.message = message;
+      store.persistCurrentGame();
 
       if (status !== GameStatus.inProgress) {
         const entry = createHistoryEntry(store.answer, status === GameStatus.won, updatedGuesses, store.state.currentMode);
@@ -153,6 +163,7 @@ export function createGameStore(baseUrl) {
       store.state.ui.status = GameStatus.inProgress;
       store.state.ui.currentInput = "";
       store.state.ui.message = clearMessage ? null : "New game started.";
+      store.persistCurrentGame();
       store.notify();
     },
 
@@ -166,6 +177,8 @@ export function createGameStore(baseUrl) {
       store.answerSequence = store.shuffledAnswers();
       store.startNewGame({ clearMessage: true });
       store.state.ui.message = "Fully reset!";
+      storage.clearCurrentGame(store.state.currentMode);
+      store.refreshResumeModes();
       store.notify();
     },
 
@@ -208,9 +221,49 @@ export function createGameStore(baseUrl) {
       if (store.answerSequence.length) {
         store.answerIndex = store.answerIndex % store.answerSequence.length;
       }
+      const persisted = storage.getCurrentGame(store.state.currentMode);
+      if (persisted && restorePersistedGame(store, persisted)) {
+        store.state.ui.isLoading = false;
+        store.notify();
+        return;
+      }
       store.startNewGame({ clearMessage: true });
       store.state.ui.isLoading = false;
       store.notify();
+    },
+
+    persistCurrentGame(modeOverride) {
+      const mode = modeOverride ?? store.state.currentMode;
+      if (!mode) return;
+      const isActive = store.state.ui.status === GameStatus.inProgress;
+      const payload = {
+        answer: store.answer,
+        guesses: store.state.ui.guesses,
+        currentInput: store.state.ui.currentInput,
+        status: store.state.ui.status,
+        message: store.state.ui.message,
+        maxGuesses: store.state.ui.maxGuesses,
+        wordLength: store.state.ui.wordLength,
+        isActive,
+        updatedAt: Date.now(),
+      };
+      storage.setCurrentGame(mode, payload);
+      store.refreshResumeModes();
+    },
+
+    refreshResumeModes() {
+      store.state.resumeModes = GameModes.filter((mode) => {
+        const persisted = storage.getCurrentGame(mode.id);
+        if (!persisted) return false;
+        if (typeof persisted.isActive === "boolean") return persisted.isActive;
+        return persisted.status === GameStatus.inProgress;
+      }).map((mode) => mode.id);
+    },
+
+    markResumeVisible() {
+      if (!store.state.showResume) {
+        store.state.showResume = true;
+      }
     },
 
     shuffledAnswers() {
@@ -221,6 +274,32 @@ export function createGameStore(baseUrl) {
   };
 
   return store;
+}
+
+function restorePersistedGame(store, persisted) {
+  if (!persisted || typeof persisted !== "object") return false;
+  const isActive = typeof persisted.isActive === "boolean" ? persisted.isActive : persisted.status === GameStatus.inProgress;
+  if (!isActive) return false;
+  if (typeof persisted.answer !== "string" || !persisted.answer.length) return false;
+  if (persisted.wordLength !== store.state.ui.wordLength) return false;
+  if (!Array.isArray(persisted.guesses)) return false;
+
+  const safeGuesses = persisted.guesses
+    .filter((guess) => guess && typeof guess.word === "string" && Array.isArray(guess.results))
+    .map((guess) => ({
+      word: guess.word.slice(0, store.state.ui.wordLength),
+      results: guess.results.slice(0, store.state.ui.wordLength),
+    }))
+    .slice(0, store.state.ui.maxGuesses);
+
+  store.answer = persisted.answer;
+  store.state.ui.guesses = safeGuesses;
+  store.state.ui.currentInput =
+    typeof persisted.currentInput === "string" ? persisted.currentInput.slice(0, store.state.ui.wordLength) : "";
+  store.state.ui.status = Object.values(GameStatus).includes(persisted.status) ? persisted.status : GameStatus.inProgress;
+  store.state.ui.message = typeof persisted.message === "string" ? persisted.message : null;
+
+  return true;
 }
 
 function scoreGuess(answer, guess, wordLength) {

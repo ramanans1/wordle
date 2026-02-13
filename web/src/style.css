@@ -40,6 +40,10 @@
   padding: 0;
 }
 
+html {
+  touch-action: manipulation;
+}
+
 body {
   font-family: "Merriweather", serif;
   background: var(--bg);
@@ -47,6 +51,7 @@ body {
   min-height: 100vh;
   font-size: 16px;
   overflow: hidden;
+  touch-action: manipulation;
 }
 
 button {
@@ -58,12 +63,14 @@ button {
 
 #app {
   min-height: 100vh;
+  touch-action: manipulation;
 }
 
 .app-root {
   min-height: 100vh;
   position: relative;
   background: var(--bg);
+  touch-action: manipulation;
 }
 
 .screen {
@@ -177,8 +184,11 @@ button {
 
 .wheel-item {
   min-height: 56px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-size: 24px;
   font-weight: 700;
   text-align: center;
@@ -186,6 +196,24 @@ button {
   background: none;
   transform-style: preserve-3d;
   cursor: pointer;
+}
+
+.wheel-title {
+  display: block;
+  line-height: 1.1;
+}
+
+.wheel-tag {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--highlight);
+  opacity: 0.85;
+}
+
+.wheel-item.resume .wheel-title,
+.wheel-item.resume .wheel-tag {
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
 }
 
 .wheel.small .wheel-item {
