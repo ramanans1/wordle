@@ -216,6 +216,7 @@ function renderGame(state) {
 
   const tileSize = computeTileSize(state.ui);
   const isTabletPortrait = window.innerWidth >= 700 && window.innerHeight > window.innerWidth;
+  const isLargeKeyboard = window.innerWidth >= 900 && !isTabletPortrait;
   const board = renderBoard(state, tileSize);
   const message = state.ui.message
     ? `<div class="message ${state.ui.status}">${state.ui.message}</div>`
@@ -226,7 +227,7 @@ function renderGame(state) {
       <div class="page-title game">My Wordle</div>
       ${board}
       ${message}
-      ${renderKeyboard(state, isTabletPortrait)}
+      ${renderKeyboard(state, isLargeKeyboard)}
       <div class="bottom-bar">
         <button class="outline-button" data-action="new-game">New Game</button>
       </div>
