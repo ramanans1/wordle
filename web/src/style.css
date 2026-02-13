@@ -928,7 +928,7 @@ button {
 
 @media (min-width: 900px) and (orientation: landscape) {
   :root {
-    --bottom-lift: clamp(28px, 5vh, 48px);
+    --bottom-lift: clamp(36px, 6vh, 60px);
   }
 
   .game-screen {
