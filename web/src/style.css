@@ -283,6 +283,12 @@ button {
   z-index: 4;
 }
 
+.app-root[data-route="stats"] .nav-arrows {
+  justify-content: flex-start;
+  align-items: center;
+  padding-left: 10px;
+}
+
 .nav-arrow {
   width: 38px;
   height: 38px;
@@ -723,7 +729,7 @@ button {
   gap: 14px;
   text-align: left;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .stats-card {
@@ -740,6 +746,18 @@ button {
   width: 100%;
   display: grid;
   gap: 14px;
+}
+
+.stats-arrow-band {
+  width: 100%;
+  height: 72px;
+  pointer-events: none;
+}
+
+@media (max-width: 520px) {
+  .stats-arrow-band {
+    height: 64px;
+  }
 }
 
 .stats-card-title {

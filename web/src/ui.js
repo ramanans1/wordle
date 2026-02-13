@@ -132,7 +132,7 @@ function renderShell(state) {
     : "";
 
   return `
-    <div class="app-root">
+    <div class="app-root" data-route="${state.route}">
       <section class="screen ${state.route === Routes.home ? "active" : ""}" data-screen="home">
         ${renderHome(state)}
       </section>
@@ -171,9 +171,8 @@ function renderHome(state) {
     `
     : "";
 
-  const resumeModes = new Set(state.resumeModes ?? []);
-  const sessionResumeMode = state.sessionResumeMode;
-  const resumeVisible = Boolean(state.showResume && sessionResumeMode && resumeModes.has(sessionResumeMode));
+  const resumeModes = new Set(state.showResume ? state.resumeModes ?? [] : []);
+  const resumeVisible = Boolean(state.showResume && resumeModes.size > 0);
   const hasResume = resumeVisible;
   const playLabel = hasResume ? "Continue" : "Play!";
 
@@ -185,7 +184,7 @@ function renderHome(state) {
         <div class="mode-wheel" id="mode-wheel" data-focus="${uiLocal.focusedModeId}">
           <div class="wheel-track horizontal">
             ${GameModes.map((mode) => {
-              const isResume = resumeVisible && mode.id === sessionResumeMode;
+              const isResume = resumeVisible && resumeModes.has(mode.id);
               return renderWheelItem(mode.label, mode.id, {
                 tag: isResume ? "Continue" : null,
                 subtitle: `${mode.wordLength}-letter word`,
@@ -421,7 +420,7 @@ function renderStats(state) {
 
       statsBlock = `
         <div class="stats-panel">
-          <div class="stats-card">
+          <div class="stats-card stats-summary-card">
             <div class="stats-card-title">Summary</div>
             <div class="stats-summary">
               <div class="stats-row">
@@ -434,7 +433,8 @@ function renderStats(state) {
               </div>
             </div>
           </div>
-          <div class="stats-card">
+          <div class="stats-arrow-band" aria-hidden="true"></div>
+          <div class="stats-card stats-histogram-card">
             <div class="stats-card-title">Guess Distribution</div>
             <div class="stats-caption">Number of games by guess count</div>
             <div class="histogram">${bars}</div>
