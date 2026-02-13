@@ -404,6 +404,10 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - `onDeleteInput()` removes last character and clears “Not in the word list.” message if present.
 - The first keystroke (letter or delete) enables resume UI for the current session.
 
+**Mode configuration (web)**
+- Uses `GameModes` from `web/src/constants.js`.
+- Pupil (`mini`) allows 7 guesses on the web build.
+
 **Submit**
 - Validations:
   1. Game is in progress.
@@ -457,6 +461,7 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - Opens focused on the current mode.
 - Horizontal wheel uses CSS scroll‑snap with `proximity` for native momentum.
 - The last session‑active mode shows a “Continue” tag and subtle glow.
+- Each mode shows its word length as a subtitle (e.g., “3‑letter word”).
 
 **Game**
 - Fixed layout: title → board → message → keyboard → bottom bar.
@@ -481,8 +486,9 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 **Stats**
 - Mode toggles are single‑select.
 - No selection: centered title and toggles.
-- With selection: stats and histogram render.
+- With selection: stats summary and histogram render in separate cards.
 - Histogram bars use a green gradient and per‑mode max guesses.
+- Bar width and height scale to relative counts; no fixed track fill.
 - Back navigation via swipe and arrow cue only.
 
 **About / How To Play**

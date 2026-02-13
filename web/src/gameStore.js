@@ -253,12 +253,27 @@ export function createGameStore(baseUrl) {
     },
 
     refreshResumeModes() {
-      store.state.resumeModes = GameModes.filter((mode) => {
+      const activeModes = [];
+      GameModes.forEach((mode) => {
         const persisted = storage.getCurrentGame(mode.id);
-        if (!persisted) return false;
-        if (typeof persisted.isActive === "boolean") return persisted.isActive;
-        return persisted.status === GameStatus.inProgress;
-      }).map((mode) => mode.id);
+        if (!persisted) return;
+        const isActive = typeof persisted.isActive === "boolean"
+          ? persisted.isActive
+          : persisted.status === GameStatus.inProgress;
+        if (isActive) {
+          activeModes.push({ id: mode.id, updatedAt: persisted.updatedAt ?? 0 });
+        }
+      });
+      store.state.resumeModes = activeModes.map((mode) => mode.id);
+      if (store.state.showResume) {
+        const stillActive = activeModes.some((mode) => mode.id === store.state.sessionResumeMode);
+        if (!stillActive) {
+          const newest = activeModes
+            .slice()
+            .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
+          store.state.sessionResumeMode = newest ? newest.id : null;
+        }
+      }
     },
 
     markResumeVisible() {

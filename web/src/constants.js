@@ -15,7 +15,7 @@ export const GameModes = [
     id: "mini",
     label: "Pupil",
     wordLength: 3,
-    maxGuesses: 5,
+    maxGuesses: 7,
     answerFile: "allowed-answers-3",
     guessFile: "allowed-guesses-3",
   },

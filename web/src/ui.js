@@ -188,6 +188,7 @@ function renderHome(state) {
               const isResume = resumeVisible && mode.id === sessionResumeMode;
               return renderWheelItem(mode.label, mode.id, {
                 tag: isResume ? "Continue" : null,
+                subtitle: `${mode.wordLength}-letter word`,
                 className: isResume ? "resume" : "",
               });
             }).join("")}
@@ -404,12 +405,13 @@ function renderStats(state) {
         .map(([guess, count]) => {
           const factor = maxCount === minCount ? 1 : (count - minCount) / (maxCount - minCount);
           const width = Math.max(count / maxCount, 0.05) * 100;
+          const height = 18 + Math.round(14 * factor);
           const barColor = interpolateColor("#0B4C2D", "#A7F3D0", factor);
           const textColor = factor > 0.5 ? "#0F172A" : "#FFFFFF";
           return `
             <div class="histogram-row">
               <div class="histogram-label">${guess}</div>
-              <div class="histogram-bar" style="--bar-fill:${width}%; --bar-color:${barColor}; --bar-text:${textColor};">
+              <div class="histogram-bar" style="--bar-fill:${width}%; --bar-color:${barColor}; --bar-text:${textColor}; --bar-height:${height}px;">
                 <span>${count}</span>
               </div>
             </div>
@@ -418,19 +420,26 @@ function renderStats(state) {
         .join("");
 
       statsBlock = `
-        <div class="stats-grid">
+        <div class="stats-panel">
           <div class="stats-card">
-            <div class="stats-label">Games Played</div>
-            <div class="stats-value">${total}</div>
+            <div class="stats-card-title">Summary</div>
+            <div class="stats-summary">
+              <div class="stats-row">
+                <div class="stats-label">Games Played</div>
+                <div class="stats-value">${total}</div>
+              </div>
+              <div class="stats-row">
+                <div class="stats-label">Win Percentage</div>
+                <div class="stats-value">${winRate.toFixed(1)}%</div>
+              </div>
+            </div>
           </div>
           <div class="stats-card">
-            <div class="stats-label">Win Percentage</div>
-            <div class="stats-value">${winRate.toFixed(1)}%</div>
+            <div class="stats-card-title">Guess Distribution</div>
+            <div class="stats-caption">Number of games by guess count</div>
+            <div class="histogram">${bars}</div>
           </div>
         </div>
-        <div class="stats-subtitle">Guess Distribution</div>
-        <div class="stats-caption">Number of games by guess count</div>
-        <div class="histogram">${bars}</div>
       `;
     }
   }
@@ -480,7 +489,7 @@ function renderHowToPlay() {
 }
 
 function renderWheelItem(title, id, options = {}) {
-  const { tag, className } = options;
+  const { tag, subtitle, className } = options;
   const classes = ["wheel-item"];
   if (className) classes.push(className);
   if (tag) classes.push("has-tag");
@@ -488,6 +497,7 @@ function renderWheelItem(title, id, options = {}) {
     <button class="${classes.join(" ")}" data-id="${id}">
       ${tag ? `<span class="wheel-tag">${tag}</span>` : ""}
       <span class="wheel-title">${title}</span>
+      ${subtitle ? `<span class="wheel-subtitle">${subtitle}</span>` : ""}
     </button>
   `;
 }
