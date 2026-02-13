@@ -102,6 +102,7 @@ export function renderApp({ app, state, store }) {
       focusFraction: 0.5,
       rowHeight: 56,
       initialScroll: uiLocal.wheelScroll["home-wheel"],
+      userScrollOnly: true,
       onScroll: (value) => {
         uiLocal.wheelScroll["home-wheel"] = value;
       },
@@ -700,7 +701,17 @@ function initKeyboard({ app, store, state }) {
 
 function initWheel(
   id,
-  { axis, focusFraction, rowHeight, itemWidth, onFocus, onSelect, initialScroll, onScroll } = {}
+  {
+    axis,
+    focusFraction,
+    rowHeight,
+    itemWidth,
+    onFocus,
+    onSelect,
+    initialScroll,
+    onScroll,
+    userScrollOnly = false,
+  } = {}
 ) {
   const container = document.getElementById(id);
   if (!container) return;
@@ -752,37 +763,47 @@ function initWheel(
   const scrollToId = (idToScroll, smooth = false) => {
     const target = items.find((item) => item.dataset.id === idToScroll);
     if (!target) return;
-    const containerRect = container.getBoundingClientRect();
-    const targetRect = target.getBoundingClientRect();
     if (axis === "x") {
-      const offset = target.offsetLeft + targetRect.width / 2 - containerRect.width * focusFraction;
+      const offset = target.offsetLeft + target.offsetWidth / 2 - container.clientWidth * focusFraction;
       container.scrollTo({ left: offset, behavior: smooth ? "smooth" : "auto" });
     } else {
-      const offset = target.offsetTop + targetRect.height / 2 - containerRect.height * focusFraction;
+      const offset = target.offsetTop + target.offsetHeight / 2 - container.clientHeight * focusFraction;
       container.scrollTo({ top: offset, behavior: smooth ? "smooth" : "auto" });
     }
   };
 
   const syncScroll = () => {
-    if (onScroll) {
+    if (onScroll && (!userScrollOnly || (!suppressScroll && !programmatic))) {
       onScroll(axis === "x" ? container.scrollLeft : container.scrollTop);
     }
   };
 
+  const snapEnabled = axis !== "x";
   let snapTimer = null;
+  let lastScrollPos = axis === "x" ? container.scrollLeft : container.scrollTop;
+  let suppressScroll = true;
+  let programmatic = false;
+
+  const setProgrammatic = (fn) => {
+    programmatic = true;
+    fn();
+    requestAnimationFrame(() => {
+      programmatic = false;
+    });
+  };
 
   const getNearestId = () => {
-    const containerRect = container.getBoundingClientRect();
     const focusPoint = axis === "x"
-      ? containerRect.left + containerRect.width * focusFraction
-      : containerRect.top + containerRect.height * focusFraction;
+      ? container.scrollLeft + container.clientWidth * focusFraction
+      : container.scrollTop + container.clientHeight * focusFraction;
 
     let nearest = null;
     let nearestDistance = Infinity;
 
     items.forEach((item) => {
-      const rect = item.getBoundingClientRect();
-      const midpoint = axis === "x" ? rect.left + rect.width / 2 : rect.top + rect.height / 2;
+      const midpoint = axis === "x"
+        ? item.offsetLeft + item.offsetWidth / 2
+        : item.offsetTop + item.offsetHeight / 2;
       const distance = Math.abs(midpoint - focusPoint);
       if (distance < nearestDistance) {
         nearestDistance = distance;
@@ -802,23 +823,34 @@ function initWheel(
   };
 
   const scheduleSnap = () => {
+    if (!snapEnabled) {
+      return;
+    }
     if (snapTimer) {
       clearTimeout(snapTimer);
     }
+    const delay = axis === "x" ? (isTouchDevice() ? 300 : 200) : (isTouchDevice() ? 260 : 150);
     snapTimer = setTimeout(() => {
-      snapToNearest();
-    }, isTouchDevice() ? 260 : 150);
+      const currentPos = axis === "x" ? container.scrollLeft : container.scrollTop;
+      if (Math.abs(currentPos - lastScrollPos) < 1) {
+        snapToNearest();
+      }
+      lastScrollPos = currentPos;
+    }, delay);
   };
 
   container.addEventListener("scroll", () => {
     updateStyles();
-    const idToFocus = getNearestId();
-    if (idToFocus) {
-      container.dataset.focus = idToFocus;
-      onFocus?.(idToFocus);
+    if (!programmatic) {
+      const idToFocus = getNearestId();
+      if (idToFocus) {
+        container.dataset.focus = idToFocus;
+        onFocus?.(idToFocus);
+      }
     }
+    lastScrollPos = axis === "x" ? container.scrollLeft : container.scrollTop;
     scheduleSnap();
-    if (onScroll) {
+    if (onScroll && (!userScrollOnly || (!suppressScroll && !programmatic))) {
       onScroll(axis === "x" ? container.scrollLeft : container.scrollTop);
     }
   });
@@ -827,6 +859,7 @@ function initWheel(
     "wheel",
     (event) => {
       event.preventDefault();
+      suppressScroll = false;
       if (axis === "x") {
         container.scrollLeft += event.deltaY || event.deltaX;
       } else {
@@ -859,6 +892,7 @@ function initWheel(
   container.addEventListener("pointerdown", (event) => {
     if (event.pointerType === "touch") return;
     if (event.button !== 0) return;
+    suppressScroll = false;
     pointerDown = true;
     dragged = false;
     container.classList.add("dragging");
@@ -896,6 +930,10 @@ function initWheel(
   });
   container.addEventListener("pointercancel", endDrag);
 
+  container.addEventListener("touchstart", () => {
+    suppressScroll = false;
+  });
+
   items.forEach((item) => {
     if (axis === "x") {
       item.style.minWidth = `${itemWidth ?? 170}px`;
@@ -925,16 +963,24 @@ function initWheel(
 
   updateStyles();
   if (typeof initialScroll === "number") {
-    if (axis === "x") {
-      container.scrollLeft = initialScroll;
-    } else {
-      container.scrollTop = initialScroll;
-    }
+    setProgrammatic(() => {
+      if (axis === "x") {
+        container.scrollLeft = initialScroll;
+      } else {
+        container.scrollTop = initialScroll;
+      }
+    });
   } else {
-    scrollToId(focusId, false);
+    setProgrammatic(() => {
+      scrollToId(focusId, false);
+    });
   }
   updateStyles();
   syncScroll();
+
+  setTimeout(() => {
+    suppressScroll = false;
+  }, 200);
 }
 
 function computeTileSize(state) {

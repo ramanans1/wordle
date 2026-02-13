@@ -172,6 +172,7 @@ button {
   display: flex;
   gap: 18px;
   width: max-content;
+  scroll-snap-type: x proximity;
 }
 
 .wheel-item {
@@ -200,6 +201,7 @@ button {
   min-width: 170px;
   height: 140px;
   font-size: 24px;
+  scroll-snap-align: center;
 }
 
 .home-footer {
