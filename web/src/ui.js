@@ -114,12 +114,13 @@ export function renderApp({ app, state, store }) {
 
 function renderShell(state) {
   const canGoHome = state.route !== Routes.home;
-  const navArrows = `
-    <div class="nav-arrows">
-      <button class="nav-arrow left ${canGoHome ? "" : "disabled"}" data-action="go-home" aria-label="Back"></button>
-      <button class="nav-arrow right disabled" aria-hidden="true"></button>
-    </div>
-  `;
+  const navArrows = canGoHome
+    ? `
+      <div class="nav-arrows">
+        <button class="nav-arrow left" data-action="go-home" aria-label="Back"></button>
+      </div>
+    `
+    : "";
   const splash = state.splashVisible
     ? `
       <div class="splash">
@@ -762,6 +763,12 @@ function initWheel(
     }
   };
 
+  const syncScroll = () => {
+    if (onScroll) {
+      onScroll(axis === "x" ? container.scrollLeft : container.scrollTop);
+    }
+  };
+
   let snapTimer = null;
 
   const snapToNearest = () => {
@@ -897,6 +904,7 @@ function initWheel(
       onFocus?.(idToFocus);
       onSelect?.(idToFocus);
       scrollToId(idToFocus, true);
+      setTimeout(syncScroll, 0);
     });
   });
 
@@ -918,6 +926,7 @@ function initWheel(
     scrollToId(focusId, false);
   }
   updateStyles();
+  syncScroll();
 }
 
 function computeTileSize(state) {
