@@ -171,9 +171,10 @@ function renderHome(state) {
     `
     : "";
 
-  const resumeVisible = Boolean(state.showResume);
-  const resumeModes = new Set(resumeVisible ? state.resumeModes ?? [] : []);
-  const hasResume = resumeVisible && resumeModes.size > 0;
+  const resumeModes = new Set(state.resumeModes ?? []);
+  const sessionResumeMode = state.sessionResumeMode;
+  const resumeVisible = Boolean(state.showResume && sessionResumeMode && resumeModes.has(sessionResumeMode));
+  const hasResume = resumeVisible;
   const playLabel = hasResume ? "Continue" : "Play!";
 
   const modeOverlay = uiLocal.showModePicker
@@ -184,7 +185,7 @@ function renderHome(state) {
         <div class="mode-wheel" id="mode-wheel" data-focus="${uiLocal.focusedModeId}">
           <div class="wheel-track horizontal">
             ${GameModes.map((mode) => {
-              const isResume = resumeVisible && resumeModes.has(mode.id);
+              const isResume = resumeVisible && mode.id === sessionResumeMode;
               return renderWheelItem(mode.label, mode.id, {
                 tag: isResume ? "Continue" : null,
                 className: isResume ? "resume" : "",
@@ -506,6 +507,9 @@ function renderModeToggles(selectedModes) {
 function bindGlobalActions({ app, state, store }) {
   app.querySelectorAll("[data-action=back-home]").forEach((button) => {
     button.addEventListener("click", () => {
+      if (state.route === Routes.game) {
+        uiLocal.focusedMenuId = "play";
+      }
       state.route = Routes.home;
       store.notify();
     });
@@ -514,6 +518,9 @@ function bindGlobalActions({ app, state, store }) {
   app.querySelectorAll("[data-action=go-home]").forEach((button) => {
     button.addEventListener("click", () => {
       if (state.route === Routes.home) return;
+      if (state.route === Routes.game) {
+        uiLocal.focusedMenuId = "play";
+      }
       state.route = Routes.home;
       store.notify();
     });
@@ -632,6 +639,9 @@ function initSwipeNavigation({ app, state, store }) {
       return;
     }
     if (deltaX > 0 && state.route !== Routes.home) {
+      if (state.route === Routes.game) {
+        uiLocal.focusedMenuId = "play";
+      }
       state.route = Routes.home;
       store.notify();
     }

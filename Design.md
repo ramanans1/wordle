@@ -347,6 +347,9 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - `state.currentMode`: one of `mini|junior|classic|epic`.
 - `state.route`: `home|game|history|stats|about|howToPlay`.
 - `state.splashVisible`: splash overlay for ~2s on launch.
+- `state.resumeModes`: list of mode IDs with an in‑progress game persisted.
+- `state.showResume`: session flag that enables “Continue” UI after the first keystroke.
+- `state.sessionResumeMode`: last mode that received input in the current session.
 
 **UI local state** (`ui.js`)
 - Home: focused menu ID, mode picker visibility, focused mode ID, reset confirmation flag and message.
@@ -361,6 +364,7 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - `random_seed`
 - `current_mode`
 - `answer_index_<mode>`
+- `current_game_<mode>` (active game snapshot per mode)
 
 **Behavior**
 - History is serialized as JSON in localStorage.
@@ -368,6 +372,9 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - Per‑mode answer index is stored and advanced per game.
 - Mode defaults to `mini` if missing or invalid.
 - Legacy history entries missing `mode` are defaulted to `classic`.
+- Active game snapshots include answer, guesses, current input, status, and mode settings.
+- Restore only resumes in‑progress games; completed games do not show resume UI.
+- Resume UI is session‑scoped: it appears only after a keystroke in the current session.
 
 ## D. Word Lists and Filtering
 
@@ -395,6 +402,7 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 **Input**
 - `onKeyInput(letter)` appends until `wordLength`.
 - `onDeleteInput()` removes last character and clears “Not in the word list.” message if present.
+- The first keystroke (letter or delete) enables resume UI for the current session.
 
 **Submit**
 - Validations:
@@ -436,8 +444,9 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 
 **Home**
 - Title and subtitle top‑aligned.
-- Vertical menu wheel: How to Play, About, Play!, History, Statistics.
+- Vertical menu wheel: How to Play, About, Play!/Continue, History, Statistics.
 - “Play!” opens a horizontal mode picker overlay.
+- After the first keystroke in a session, the Play label switches to “Continue.”
 - Full Reset is a menu item in the wheel; confirmation UI and success message appear below.
 - When mode picker is open, the vertical wheel is softly blurred and dimmed.
 
@@ -447,6 +456,7 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - Selecting a mode immediately starts a game and navigates to Game screen.
 - Opens focused on the current mode.
 - Horizontal wheel uses CSS scroll‑snap with `proximity` for native momentum.
+- The last session‑active mode shows a “Continue” tag and subtle glow.
 
 **Game**
 - Fixed layout: title → board → message → keyboard → bottom bar.
@@ -488,10 +498,15 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - Touch devices use a longer snap delay to reduce bounce.
 - Scroll position for the home wheel is restored on return.
 - Horizontal wheel snap is handled by CSS scroll‑snap (JS snap disabled for axis `x`).
+- Resume items use a highlight glow plus a soft halo aligned to the wheel’s aesthetic.
 
 **Swipe navigation**
 - Swipe right on any subpage returns to Home.
 - Visual arrow cue appears only on subpages (left edge only).
+- Swipe‑to‑home is edge‑gated and requires a longer horizontal gesture to reduce accidental exits.
+
+**Touch guard**
+- Double‑tap zoom is suppressed via `touch-action: manipulation` and a touchend guard, while pinch‑to‑zoom remains available.
 
 ## H. Input and Accessibility
 

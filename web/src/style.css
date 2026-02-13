@@ -213,7 +213,29 @@ button {
 
 .wheel-item.resume .wheel-title,
 .wheel-item.resume .wheel-tag {
-  text-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
+  text-shadow: 0 0 22px rgba(56, 189, 248, 0.75), 0 0 42px rgba(56, 189, 248, 0.35);
+}
+
+.wheel-item.resume {
+  position: relative;
+}
+
+.wheel-item.resume::after {
+  content: "";
+  position: absolute;
+  inset: -4px -8px;
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 35%, rgba(56, 189, 248, 0.16), rgba(56, 189, 248, 0.02) 58%, transparent 68%);
+  filter: blur(3px);
+  opacity: 0.6;
+  z-index: -1;
+}
+
+.mode-wheel .wheel-item.resume::after {
+  inset: 0 -8px -6px;
+  background: radial-gradient(circle at 50% 45%, rgba(56, 189, 248, 0.16), rgba(56, 189, 248, 0.02) 60%, transparent 70%);
+  filter: blur(2px);
+  opacity: 0.5;
 }
 
 .wheel.small .wheel-item {

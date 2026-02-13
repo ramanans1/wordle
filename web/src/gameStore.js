@@ -24,6 +24,7 @@ export function createGameStore(baseUrl) {
       splashVisible: true,
       resumeModes: [],
       showResume: false,
+      sessionResumeMode: null,
     },
     wordList: [],
     answerList: [],
@@ -264,6 +265,7 @@ export function createGameStore(baseUrl) {
       if (!store.state.showResume) {
         store.state.showResume = true;
       }
+      store.state.sessionResumeMode = store.state.currentMode;
     },
 
     shuffledAnswers() {
