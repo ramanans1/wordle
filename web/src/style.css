@@ -928,10 +928,32 @@ button {
 
 @media (min-width: 900px) and (orientation: landscape) {
   :root {
-    --bottom-lift: clamp(24px, 4vh, 40px);
+    --bottom-lift: clamp(28px, 5vh, 48px);
   }
 
   .game-screen {
     padding-bottom: 20px;
+  }
+
+  .keyboard {
+    gap: 4px;
+  }
+
+  .keyboard-row {
+    gap: 4px;
+  }
+
+  .key {
+    width: 26px;
+    height: 36px;
+    font-size: 14px;
+  }
+
+  .key.wide {
+    width: 52px;
+  }
+
+  .key.extra {
+    width: 82px;
   }
 }

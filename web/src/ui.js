@@ -991,6 +991,7 @@ function computeTileSize(state) {
   const horizontalPadding = 16;
   const tileSpacing = 8;
   const compact = screenHeight < 750;
+  const shortLandscape = screenHeight < 650 && screenWidth > screenHeight;
   const titleHeight = compact ? 40 : 44;
   const messageHeight = compact ? 40 : 48;
   const keyboardRow = compact ? 38 : 44;
@@ -1008,8 +1009,8 @@ function computeTileSize(state) {
   const widthSize = (widthAvailable - widthSpacing) / wordLength;
   const heightSize = (boardHeightBudget - heightSpacing) / maxRows;
   const isTabletPortrait = screenWidth >= 700 && screenHeight > screenWidth;
-  const maxTile = isTabletPortrait ? 82 : 68;
-  const minTile = isTabletPortrait ? 36 : 32;
+  const maxTile = isTabletPortrait ? 82 : (shortLandscape ? 58 : 68);
+  const minTile = isTabletPortrait ? 36 : (shortLandscape ? 28 : 32);
   return Math.min(maxTile, Math.max(minTile, Math.min(widthSize, heightSize)));
 }
 
