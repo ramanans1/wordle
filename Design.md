@@ -304,180 +304,212 @@ All UI is implemented in `Views/WordleViews.swift`.
 - `ios/Wordle/Wordle/Resources/*.txt` – word lists.
 - `ios/Wordle/Wordle/Info.plist` – fonts, launch configuration.
 
-# Web App Plan and Design (Draft)
+# Web App Design (Implemented)
 
-This section proposes a web app implementation that mirrors the current iOS behavior and UI/UX. It is intentionally scoped to a single‑player, offline‑first, deterministic experience with local persistence and no server dependency.
+This section documents the shipped vanilla + Vite web app that mirrors the iOS behavior and UI/UX. It is a single‑player, offline‑first, deterministic experience with local persistence and no server dependency.
 
-## A. Plan
-
-**Goals**
-- Preserve the existing UI/UX (home wheel, mode picker, fixed board layout, keyboard, history, stats).
-- Maintain identical game logic and determinism (seeded shuffle, per‑mode answer index).
-- Ensure persistent history and state across browser sessions on the same device.
-
-**Non‑goals**
-- Multi‑device sync or user accounts.
-- Multiplayer or social features.
-- Push notifications.
-
-**Milestones**
-1. Core engine port (logic, models, seeded RNG, scoring, word lists).
-2. Persistence layer (local storage; format compatible with iOS keys).
-3. UI parity for Home, Game, History, Stats, About, How To Play.
-4. Polish and accessibility (keyboard nav, reduced motion, mobile layout).
-5. Packaging and deployment (static hosting; optional PWA shell).
-
-**Key decisions (draft)**
-- Framework: choose between plain TypeScript + Vite or a lightweight UI framework. Aim to keep dependencies minimal.
-- Storage: `localStorage` (simple) vs `IndexedDB` (more robust); start with `localStorage`, keep a migration path.
-- Rendering: canvas not required; DOM + CSS for wheel effects and board layout.
-
-**Risks**
-- Wheel UI behavior on touch vs mouse; may require careful inertial scrolling tuning.
-- Font rendering differences between iOS and web; ensure bundled fonts match.
-- Local storage limits; history size could require compaction in future.
-
-## B. Web Architecture
+## A. Overview
 
 **App type**
-- Static web app (SPA) with offline‑first behavior.
-- No required backend.
+- Static SPA built with vanilla JS and Vite.
+- Offline‑first; no backend.
 
 **Entry**
-- Single root app initializes storage, loads word lists, and restores state.
+- `web/index.html` loads `web/src/main.js`.
+- `main.js` initializes a `GameStore`, subscribes UI rendering, and manages resize re‑renders.
 
-**State ownership**
-- A single `GameStore` (or similar) is the source of truth, analogous to `GameViewModel`.
-- State changes are deterministic and synchronous; UI subscribes to store.
+**Primary files (web)**
+- `web/src/constants.js` – game constants, colors, modes, enums.
+- `web/src/storage.js` – localStorage persistence wrapper.
+- `web/src/rng.js` – seeded LCG and deterministic shuffle.
+- `web/src/wordlists.js` – word list loading and filtering.
+- `web/src/dateUtils.js` – calendar and date formatting helpers.
+- `web/src/gameStore.js` – core state and game logic.
+- `web/src/ui.js` – HTML rendering and interactions.
+- `web/src/style.css` – full UI styling.
+- `web/vite.config.js` – base path configuration for GitHub Pages.
 
-**Modules**
-- `models/`: data types (GameMode, Guess, GameHistoryEntry, LetterState, GameStatus).
-- `engine/`: scoring, input handling, mode switching, new game, full reset.
-- `storage/`: persistence keys, serialization, migrations.
-- `ui/`: views and components (Home, Game, History, Stats, About, HowToPlay).
-- `assets/`: word lists, fonts, icons, splash.
+**Static assets**
+- Word lists: `web/public/wordlist/*.txt` (same names as iOS resources).
+- Fonts: `web/src/assets/fonts/*.ttf` (Merriweather variable fonts).
 
-## C. Data Model and Persistence (Web)
+## B. State Model
 
-**Persistence keys (match iOS)**
+**Store state** (`gameStore.js`)
+- `state.ui`:
+  - `isLoading`: loading status for word lists.
+  - `message`: transient game feedback.
+  - `guesses`: list of `{ word, results }`.
+  - `currentInput`: active input string.
+  - `status`: `inProgress`, `won`, `lost`.
+  - `maxGuesses`, `wordLength`: per‑mode.
+- `state.history`: list of `GameHistoryEntry` objects (newest first).
+- `state.currentMode`: one of `mini|junior|classic|epic`.
+- `state.route`: `home|game|history|stats|about|howToPlay`.
+- `state.splashVisible`: splash overlay for ~2s on launch.
+
+**UI local state** (`ui.js`)
+- Home: focused menu ID, mode picker visibility, focused mode ID, reset confirmation flag and message.
+- History: displayed month, selected date, expanded entry ID, selected mode filters.
+- Stats: selected mode (single‑select).
+- About / How To Play: focused wheel ID.
+
+## C. Persistence
+
+**Keys** (matching iOS)
 - `history_entries_json`
 - `random_seed`
 - `current_mode`
 - `answer_index_<mode>`
 
-**History entry**
-- `timestamp` (ms since epoch)
-- `answer` (string)
-- `won` (boolean)
-- `guesses` (string[])
-- `mode` (string; default to `classic` if missing)
-- `dateString` (derived `yyyy-MM-dd`)
+**Behavior**
+- History is serialized as JSON in localStorage.
+- Seed is persisted; default is `12345` if missing.
+- Per‑mode answer index is stored and advanced per game.
+- Mode defaults to `mini` if missing or invalid.
+- Legacy history entries missing `mode` are defaulted to `classic`.
 
-**Storage format**
-- JSON for structured types.
-- Primitive types for seed and indices.
+## D. Word Lists and Filtering
 
-**Storage backend**
-- Start with `localStorage`.
-- Abstract through a storage interface so `IndexedDB` can be swapped later.
+**Source**
+- `web/public/wordlist/` mirrors iOS resource file names.
 
-## D. Game Logic Parity
+**Rules**
+- Lowercase, trim, alpha only, length‑match per mode.
+- `blockedAnswers` are removed from both guesses and answers.
+- Fallback words are used per mode when lists are unavailable.
 
-**Word lists**
-- Use the same word lists in `ios/Wordle/Wordle/Resources/*.txt`.
-- Same filtering rules and blocked answer set.
+**Loading**
+- `loadWordLists()` fetches `wordlist/<name>.txt` via `BASE_URL`.
+- The word set is the union of guesses and answers.
 
-**Seeded RNG**
-- Port the same LCG generator and default seed (`12345`).
-- Maintain per‑mode shuffled answer list and persisted answer index.
+## E. Determinism and RNG
 
-**Scoring**
-- Same two‑pass evaluation (correct, then present, then absent).
+**Seeded generator**
+- BigInt LCG with the same constants as iOS.
+- `shuffleWithSeed()` implements Fisher‑Yates with seeded randomness.
+- Answer sequence is shuffled once per mode and advanced with `answer_index_<mode>`.
 
-## E. UI/UX Parity
+## F. Game Logic
+
+**Input**
+- `onKeyInput(letter)` appends until `wordLength`.
+- `onDeleteInput()` removes last character and clears “Not in the word list.” message if present.
+
+**Submit**
+- Validations:
+  1. Game is in progress.
+  2. Guess length matches word length.
+  3. Guess is in `wordSet`.
+- Scoring uses a two‑pass Wordle evaluation:
+  1. Exact matches → `correct`.
+  2. Remaining letters → `present` if still available, else `absent`.
+
+**End of game**
+- Win on exact match; loss on max guesses.
+- `GameHistoryEntry` stored immediately on win/loss.
+- End message:
+  - Win: `You solved it! The word was ...`
+  - Loss: `Out of guesses. The word was ...`
+
+**New game**
+- Advances answer index (per‑mode) and persists it.
+- Resets guesses/input/status; message is “New game started.” unless cleared.
+
+**Full reset**
+- Clears history and per‑mode indices.
+- Reseeds using current time and reshuffles answers.
+- Starts a new game and shows “Fully reset!”.
+
+## G. UI/UX (Implemented)
+
+**Global layout**
+- Full‑screen viewport (no page scrolling).
+- Screen panels are swapped by route; only one is visible at a time.
+- Bottom bars are in‑flow and always visible without scrolling.
+
+**Splash**
+- Full‑screen “My Wordle” overlay shown for ~2 seconds on startup.
 
 **Home**
-- Vertical menu wheel with snapping and perspective effects.
+- Title and subtitle top‑aligned.
+- Vertical menu wheel: How to Play, About, Play!, History, Statistics.
 - “Play!” opens a horizontal mode picker overlay.
-- Full Reset confirmation and message feedback.
+- Full Reset reveals confirmation UI and a success message.
+- When mode picker is open, the vertical wheel is softly blurred and dimmed.
+
+**Mode picker**
+- Horizontal wheel with Pupil/Scribe/Author/Wordsmith.
+- Tap top/bottom 30% of overlay to dismiss.
+- Selecting a mode immediately starts a game and navigates to Game screen.
 
 **Game**
-- Fixed layout with board, message, keyboard, and bottom controls visible.
-- Tile sizing based on viewport to fit word length and max guesses.
-
-**History**
-- Month calendar view with mode toggles.
-- Entry list filtered by date and selected modes.
-
-**Stats**
-- Mode selection and histogram ranges by mode max guesses.
-
-**About / How To Play**
-- Vertical wheel with copy and formatting matching iOS.
-
-## F. Accessibility and Input
+- Fixed layout: title → board → message → keyboard → bottom bar.
+- Tile sizing adapts to viewport and mode.
+- Bottom bar: “New Game” and “Back”.
 
 **Keyboard**
-- On‑screen keyboard plus physical keyboard support.
-- Aria labels for keys and controls.
+- Three letter rows plus Delete and Submit.
+- Key colors reflect highest known `LetterState`.
+- Physical keyboard support: letters, Backspace, Enter.
 
-**Reduced motion**
-- Respect `prefers-reduced-motion` by disabling wheel inertia effects and heavy transitions.
+**History**
+- Calendar month view with previous/next.
+- Days are color‑coded:
+  - Selected day: blue.
+  - Days with games: green.
+  - Empty days: gray.
+- Mode toggles are multi‑select (filter).
+- Entry cards expand to show guesses.
 
-## G. Deployment
+**Stats**
+- Mode toggles are single‑select.
+- No selection: centered title and toggles.
+- With selection: stats and histogram render.
+- Histogram bars use a green gradient and per‑mode max guesses.
 
-**Target**
-- Static hosting (Netlify, Vercel, GitHub Pages).
-- Optional PWA manifest + service worker for offline caching.
+**About / How To Play**
+- Vertical wheel with iOS‑matching copy.
+- Centered wheel spacing between title and Back button.
 
-## H. Build Plans (Detailed)
+**Wheel behavior**
+- Scrollable containers with perspective scaling, opacity, blur, and rotation.
+- Snap‑to‑nearest after scroll with a 150ms delay.
+- Supports trackpad/mouse wheel scrolling and pointer drag.
+- Click/tap selects and snaps to the focused item.
 
-**Build strategy**
-- Use a minimal front-end toolchain to keep the app lightweight and deterministic.
-- Prefer static assets and local state; no server runtime required.
+## H. Input and Accessibility
 
-**Recommended toolchain (draft)**
-- `node` + `npm` or `pnpm`.
-- Bundler/dev server: `vite` (fast dev server, reliable static build).
+**Supported input**
+- Pointer and touch for wheels and buttons.
+- Keyboard input on Game screen.
 
-**Project layout (draft)**
-- `web/` (new web app root)
-- `web/src/` (app code)
-- `web/public/` (static assets: word lists, icons, fonts)
-- `web/dist/` (build output for GitHub Pages)
+**Notes**
+- No explicit ARIA labels yet.
+- No reduced‑motion mode yet.
 
-**Scripts (draft)**
-- `dev`: start local dev server
-- `build`: produce static site for deployment
-- `preview`: serve the built `dist/` locally
+## I. Build and Deployment
 
-**Build steps**
-1. Install dependencies.
-2. Run `dev` to iterate on UI/UX and logic.
-3. Run `build` to validate production bundle.
-4. Run `preview` to test production bundle locally.
+**Toolchain**
+- Vite, vanilla JS.
 
-**GitHub Pages compatibility**
-- Configure `base` path in the bundler for repo‑based hosting.
-- Use relative asset paths to avoid broken links.
-- Output `dist/` ready for GitHub Pages publishing.
+**Scripts** (`web/package.json`)
+- `dev`: Vite dev server.
+- `build`: production bundle to `web/dist`.
+- `preview`: local server for `web/dist`.
 
-**Word list handling**
-- Ship word list files as static assets in `public/`.
-- Fetch and cache them on first load.
-- Keep the filtered list in memory; persist seed/index only.
+**GitHub Pages**
+- Base path controlled by `BASE_PATH` env var (`vite.config.js`).
+- Example: `BASE_PATH="/wordle/" npm run build`.
+- Static assets use relative/BASE_URL paths.
+- `scripts/deploy-gh-pages.sh` builds and deploys via a temporary `gh-pages` worktree.
 
-**State persistence**
-- Store `history_entries_json`, `random_seed`, `current_mode`, and `answer_index_<mode>` in `localStorage`.
-- Implement a versioned storage wrapper to allow future migrations.
+**Ignored artifacts**
+- `web/node_modules/` and `web/dist/` are ignored in `.gitignore`.
 
-**Testing plan**
-- Unit tests for seeded RNG, scoring, and word list filters.
-- Manual UI tests for wheels, keyboard, and screen layouts.
-- Persistence tests: reload, close/reopen, and long‑running history.
+## J. Known Gaps / Non‑Goals
 
-**Release checklist**
-- Build succeeds with clean install.
-- Production preview passes local smoke test.
-- History and stats stable after restart.
-- Mobile layout verified (Safari iOS + Chrome Android).
+- No PWA/service worker.
+- No cross‑device sync.
+- No analytics or network dependencies.
+- No reduced‑motion adaptations yet.
