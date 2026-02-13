@@ -303,3 +303,181 @@ All UI is implemented in `Views/WordleViews.swift`.
 - `ios/Wordle/Wordle/Resources/Assets.xcassets` – app icon assets.
 - `ios/Wordle/Wordle/Resources/*.txt` – word lists.
 - `ios/Wordle/Wordle/Info.plist` – fonts, launch configuration.
+
+# Web App Plan and Design (Draft)
+
+This section proposes a web app implementation that mirrors the current iOS behavior and UI/UX. It is intentionally scoped to a single‑player, offline‑first, deterministic experience with local persistence and no server dependency.
+
+## A. Plan
+
+**Goals**
+- Preserve the existing UI/UX (home wheel, mode picker, fixed board layout, keyboard, history, stats).
+- Maintain identical game logic and determinism (seeded shuffle, per‑mode answer index).
+- Ensure persistent history and state across browser sessions on the same device.
+
+**Non‑goals**
+- Multi‑device sync or user accounts.
+- Multiplayer or social features.
+- Push notifications.
+
+**Milestones**
+1. Core engine port (logic, models, seeded RNG, scoring, word lists).
+2. Persistence layer (local storage; format compatible with iOS keys).
+3. UI parity for Home, Game, History, Stats, About, How To Play.
+4. Polish and accessibility (keyboard nav, reduced motion, mobile layout).
+5. Packaging and deployment (static hosting; optional PWA shell).
+
+**Key decisions (draft)**
+- Framework: choose between plain TypeScript + Vite or a lightweight UI framework. Aim to keep dependencies minimal.
+- Storage: `localStorage` (simple) vs `IndexedDB` (more robust); start with `localStorage`, keep a migration path.
+- Rendering: canvas not required; DOM + CSS for wheel effects and board layout.
+
+**Risks**
+- Wheel UI behavior on touch vs mouse; may require careful inertial scrolling tuning.
+- Font rendering differences between iOS and web; ensure bundled fonts match.
+- Local storage limits; history size could require compaction in future.
+
+## B. Web Architecture
+
+**App type**
+- Static web app (SPA) with offline‑first behavior.
+- No required backend.
+
+**Entry**
+- Single root app initializes storage, loads word lists, and restores state.
+
+**State ownership**
+- A single `GameStore` (or similar) is the source of truth, analogous to `GameViewModel`.
+- State changes are deterministic and synchronous; UI subscribes to store.
+
+**Modules**
+- `models/`: data types (GameMode, Guess, GameHistoryEntry, LetterState, GameStatus).
+- `engine/`: scoring, input handling, mode switching, new game, full reset.
+- `storage/`: persistence keys, serialization, migrations.
+- `ui/`: views and components (Home, Game, History, Stats, About, HowToPlay).
+- `assets/`: word lists, fonts, icons, splash.
+
+## C. Data Model and Persistence (Web)
+
+**Persistence keys (match iOS)**
+- `history_entries_json`
+- `random_seed`
+- `current_mode`
+- `answer_index_<mode>`
+
+**History entry**
+- `timestamp` (ms since epoch)
+- `answer` (string)
+- `won` (boolean)
+- `guesses` (string[])
+- `mode` (string; default to `classic` if missing)
+- `dateString` (derived `yyyy-MM-dd`)
+
+**Storage format**
+- JSON for structured types.
+- Primitive types for seed and indices.
+
+**Storage backend**
+- Start with `localStorage`.
+- Abstract through a storage interface so `IndexedDB` can be swapped later.
+
+## D. Game Logic Parity
+
+**Word lists**
+- Use the same word lists in `ios/Wordle/Wordle/Resources/*.txt`.
+- Same filtering rules and blocked answer set.
+
+**Seeded RNG**
+- Port the same LCG generator and default seed (`12345`).
+- Maintain per‑mode shuffled answer list and persisted answer index.
+
+**Scoring**
+- Same two‑pass evaluation (correct, then present, then absent).
+
+## E. UI/UX Parity
+
+**Home**
+- Vertical menu wheel with snapping and perspective effects.
+- “Play!” opens a horizontal mode picker overlay.
+- Full Reset confirmation and message feedback.
+
+**Game**
+- Fixed layout with board, message, keyboard, and bottom controls visible.
+- Tile sizing based on viewport to fit word length and max guesses.
+
+**History**
+- Month calendar view with mode toggles.
+- Entry list filtered by date and selected modes.
+
+**Stats**
+- Mode selection and histogram ranges by mode max guesses.
+
+**About / How To Play**
+- Vertical wheel with copy and formatting matching iOS.
+
+## F. Accessibility and Input
+
+**Keyboard**
+- On‑screen keyboard plus physical keyboard support.
+- Aria labels for keys and controls.
+
+**Reduced motion**
+- Respect `prefers-reduced-motion` by disabling wheel inertia effects and heavy transitions.
+
+## G. Deployment
+
+**Target**
+- Static hosting (Netlify, Vercel, GitHub Pages).
+- Optional PWA manifest + service worker for offline caching.
+
+## H. Build Plans (Detailed)
+
+**Build strategy**
+- Use a minimal front-end toolchain to keep the app lightweight and deterministic.
+- Prefer static assets and local state; no server runtime required.
+
+**Recommended toolchain (draft)**
+- `node` + `npm` or `pnpm`.
+- Bundler/dev server: `vite` (fast dev server, reliable static build).
+
+**Project layout (draft)**
+- `web/` (new web app root)
+- `web/src/` (app code)
+- `web/public/` (static assets: word lists, icons, fonts)
+- `web/dist/` (build output for GitHub Pages)
+
+**Scripts (draft)**
+- `dev`: start local dev server
+- `build`: produce static site for deployment
+- `preview`: serve the built `dist/` locally
+
+**Build steps**
+1. Install dependencies.
+2. Run `dev` to iterate on UI/UX and logic.
+3. Run `build` to validate production bundle.
+4. Run `preview` to test production bundle locally.
+
+**GitHub Pages compatibility**
+- Configure `base` path in the bundler for repo‑based hosting.
+- Use relative asset paths to avoid broken links.
+- Output `dist/` ready for GitHub Pages publishing.
+
+**Word list handling**
+- Ship word list files as static assets in `public/`.
+- Fetch and cache them on first load.
+- Keep the filtered list in memory; persist seed/index only.
+
+**State persistence**
+- Store `history_entries_json`, `random_seed`, `current_mode`, and `answer_index_<mode>` in `localStorage`.
+- Implement a versioned storage wrapper to allow future migrations.
+
+**Testing plan**
+- Unit tests for seeded RNG, scoring, and word list filters.
+- Manual UI tests for wheels, keyboard, and screen layouts.
+- Persistence tests: reload, close/reopen, and long‑running history.
+
+**Release checklist**
+- Build succeeds with clean install.
+- Production preview passes local smoke test.
+- History and stats stable after restart.
+- Mobile layout verified (Safari iOS + Chrome Android).
