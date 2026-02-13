@@ -39,6 +39,7 @@ export function renderApp({ app, state, store }) {
   app.innerHTML = renderShell(state);
 
   bindGlobalActions({ app, state, store });
+  initSwipeNavigation({ app, state, store });
 
   if (state.route === Routes.home) {
     bindHome({ app, state, store });
@@ -112,6 +113,13 @@ export function renderApp({ app, state, store }) {
 }
 
 function renderShell(state) {
+  const canGoHome = state.route !== Routes.home;
+  const navArrows = `
+    <div class="nav-arrows">
+      <button class="nav-arrow left ${canGoHome ? "" : "disabled"}" data-action="go-home" aria-label="Back"></button>
+      <button class="nav-arrow right disabled" aria-hidden="true"></button>
+    </div>
+  `;
   const splash = state.splashVisible
     ? `
       <div class="splash">
@@ -140,6 +148,7 @@ function renderShell(state) {
       <section class="screen ${state.route === Routes.howToPlay ? "active" : ""}" data-screen="howTo">
         ${renderHowToPlay()}
       </section>
+      ${navArrows}
       ${splash}
     </div>
   `;
@@ -157,9 +166,7 @@ function renderHome(state) {
         </div>
       </div>
     `
-    : `
-      <button class="ghost-button" data-action="reset-start">Full Reset</button>
-    `;
+    : "";
 
   const modeOverlay = uiLocal.showModePicker
     ? `
@@ -188,6 +195,7 @@ function renderHome(state) {
           ${renderWheelItem("Play!", "play")}
           ${renderWheelItem("History", "history")}
           ${renderWheelItem("Statistics", "stats")}
+          ${renderWheelItem("Full Reset", "reset")}
         </div>
       </div>
       <div class="home-footer">
@@ -219,7 +227,6 @@ function renderGame(state) {
       ${renderKeyboard(state, isTabletPortrait)}
       <div class="bottom-bar">
         <button class="outline-button" data-action="new-game">New Game</button>
-        <button class="outline-button muted" data-action="back-home">Back</button>
       </div>
     </div>
   `;
@@ -325,9 +332,6 @@ function renderHistory(state) {
         ${selectedEntries.length ? `Games played on ${formattedDate}` : `No games played on ${formattedDate}`}
       </div>
       <div class="history-list">${cards}</div>
-      <div class="bottom-bar single">
-        <button class="outline-button muted" data-action="back-home">Back</button>
-      </div>
     </div>
   `;
 }
@@ -419,9 +423,6 @@ function renderStats(state) {
       <div class="page-title section">Statistics</div>
       ${renderModeToggles(selectedMode ? [selectedMode] : [])}
       <div class="stats-body">${statsBlock}</div>
-      <div class="bottom-bar single">
-        <button class="outline-button muted" data-action="back-home">Back</button>
-      </div>
     </div>
   `;
 }
@@ -437,9 +438,6 @@ function renderAbout() {
           ${renderWheelItem("Pupil and Scribe are shorter words. Author and Wordsmith are longer.", "a3")}
           ${renderWheelItem("Play offline and let the calendar keep your victories.", "a4")}
         </div>
-      </div>
-      <div class="bottom-bar single">
-        <button class="outline-button muted" data-action="back-home">Back</button>
       </div>
     </div>
   `;
@@ -459,9 +457,6 @@ function renderHowToPlay() {
           ${renderWheelItem("Gray => not in the word.", "h6")}
           ${renderWheelItem("Good luck!", "h7")}
         </div>
-      </div>
-      <div class="bottom-bar single">
-        <button class="outline-button muted" data-action="back-home">Back</button>
       </div>
     </div>
   `;
@@ -490,6 +485,14 @@ function bindGlobalActions({ app, state, store }) {
       store.notify();
     });
   });
+
+  app.querySelectorAll("[data-action=go-home]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (state.route === Routes.home) return;
+      state.route = Routes.home;
+      store.notify();
+    });
+  });
 }
 
 function bindHome({ app, state, store }) {
@@ -502,6 +505,11 @@ function bindHome({ app, state, store }) {
     if (id === "play") {
       uiLocal.focusedModeId = GameModes[0].id;
       uiLocal.showModePicker = true;
+      store.notify();
+      return;
+    }
+    if (id === "reset") {
+      uiLocal.showConfirm = true;
       store.notify();
       return;
     }
@@ -557,6 +565,43 @@ function bindGame({ app, state, store }) {
   });
 
   initKeyboard({ app, store, state });
+}
+
+function initSwipeNavigation({ app, state, store }) {
+  const root = app.querySelector(".app-root");
+  if (!root) return;
+
+  let startX = 0;
+  let startY = 0;
+  let active = false;
+
+  const shouldIgnore = (target) => {
+    return Boolean(target.closest(".wheel") || target.closest(".keyboard") || target.closest(".history-list"));
+  };
+
+  root.addEventListener("touchstart", (event) => {
+    if (event.touches.length !== 1) return;
+    if (shouldIgnore(event.target)) return;
+    active = true;
+    startX = event.touches[0].clientX;
+    startY = event.touches[0].clientY;
+  });
+
+  root.addEventListener("touchend", (event) => {
+    if (!active) return;
+    active = false;
+    const endX = event.changedTouches[0].clientX;
+    const endY = event.changedTouches[0].clientY;
+    const deltaX = endX - startX;
+    const deltaY = endY - startY;
+    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) {
+      return;
+    }
+    if (deltaX > 0 && state.route !== Routes.home) {
+      state.route = Routes.home;
+      store.notify();
+    }
+  });
 }
 
 function bindHistory({ app, state, store }) {
