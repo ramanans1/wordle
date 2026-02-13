@@ -104,10 +104,6 @@ export function renderApp({ app, state, store }) {
       },
     });
   }
-
-  if (state.route === Routes.game) {
-    initKeyboard({ app, store, state });
-  }
 }
 
 function renderShell(state) {
@@ -865,13 +861,16 @@ function computeTileSize(state) {
   const screenHeight = window.innerHeight;
   const horizontalPadding = 16;
   const tileSpacing = 8;
-  const titleHeight = 40;
-  const messageHeight = 42;
-  const keyboardHeight = 3 * 40 + 3 * 6 + 40;
-  const bottomBarHeight = 66;
+  const compact = screenHeight < 750;
+  const titleHeight = compact ? 40 : 44;
+  const messageHeight = compact ? 40 : 48;
+  const keyboardRow = compact ? 38 : 44;
+  const keyboardGap = compact ? 4 : 6;
+  const keyboardHeight = 3 * keyboardRow + 3 * keyboardGap + keyboardRow;
+  const bottomBarHeight = compact ? 54 : 60;
   const interSpacing = 12 * 3;
   const boardHeightBudget =
-    screenHeight - (titleHeight + messageHeight + keyboardHeight + bottomBarHeight + interSpacing + 16 + 40);
+    screenHeight - (titleHeight + messageHeight + keyboardHeight + bottomBarHeight + interSpacing + 12 + 20);
   const wordLength = Math.max(state.wordLength, 1);
   const maxRows = Math.max(state.maxGuesses, 1);
   const widthAvailable = screenWidth - horizontalPadding * 2;
@@ -880,8 +879,8 @@ function computeTileSize(state) {
   const widthSize = (widthAvailable - widthSpacing) / wordLength;
   const heightSize = (boardHeightBudget - heightSpacing) / maxRows;
   const isTabletPortrait = screenWidth >= 700 && screenHeight > screenWidth;
-  const maxTile = isTabletPortrait ? 78 : 60;
-  const minTile = isTabletPortrait ? 32 : 28;
+  const maxTile = isTabletPortrait ? 82 : 68;
+  const minTile = isTabletPortrait ? 36 : 32;
   return Math.min(maxTile, Math.max(minTile, Math.min(widthSize, heightSize)));
 }
 
