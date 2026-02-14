@@ -240,11 +240,11 @@ All UI is implemented in `Views/WordleViews.swift`.
 ### 7.6 About and How To Play
 
 **About**
-- Short, kid‑friendly copy presented in a vertical wheel.
+- Multi‑line, kid‑friendly narrative presented in a vertical wheel (rank progression, pacing, and persistence).
 - Includes game description, ranks, and what ranks mean.
 
 **How To Play**
-- Short, kid‑friendly steps in a vertical wheel.
+- Step‑by‑step guidance in a vertical wheel (rank choice, input rules, tile meaning, and reminders).
 - Explains ranks and letter counts.
 - Color explanations are on separate lines using “=>”.
 - Ends with “Good luck!”.
@@ -492,8 +492,8 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - Back navigation via swipe and arrow cue only.
 
 **About / How To Play**
-- Vertical wheel with iOS‑matching copy.
-- Centered wheel spacing between title and Back button.
+- Vertical wheel with expanded copy blocks (multi‑line guidance).
+- Extra top/bottom wheel padding to reduce clipping on scroll.
 - Back navigation via swipe and arrow cue only.
 
 **Wheel behavior**

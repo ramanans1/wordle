@@ -57,8 +57,9 @@ export function renderApp({ app, state, store }) {
   if (state.route === Routes.about) {
     initWheel("about-wheel", {
       axis: "y",
-      focusFraction: 0.18,
+      focusFraction: 0.25,
       rowHeight: 52,
+      edgePadding: 24,
       onFocus: (id) => {
         uiLocal.about.focusedId = id;
       },
@@ -67,8 +68,9 @@ export function renderApp({ app, state, store }) {
   if (state.route === Routes.howToPlay) {
     initWheel("howto-wheel", {
       axis: "y",
-      focusFraction: 0.18,
+      focusFraction: 0.25,
       rowHeight: 52,
+      edgePadding: 24,
       onFocus: (id) => {
         uiLocal.howTo.focusedId = id;
       },
@@ -459,10 +461,19 @@ function renderAbout() {
       <div class="page-title section">About</div>
       <div class="wheel small" id="about-wheel" data-focus="${uiLocal.about.focusedId}">
         <div class="wheel-track vertical">
-          ${renderWheelItem("My Wordle is a word puzzle where you guess the hidden word.", "a1")}
-          ${renderWheelItem("Four ranks to grow into: Pupil, Scribe, Author, Wordsmith.", "a2")}
-          ${renderWheelItem("Pupil and Scribe are shorter words. Author and Wordsmith are longer.", "a3")}
-          ${renderWheelItem("Play offline and let the calendar keep your victories.", "a4")}
+          ${renderWheelItem("My Wordle is a game to guess a secret word.", "a1")}
+          ${renderWheelItem("Pick a rank and start thinking.", "a2")}
+          ${renderWheelItem("Begin as a Pupil (3 letters).", "a3")}
+          ${renderWheelItem("Grow into a Scribe (4 letters).", "a4")}
+          ${renderWheelItem("Take on Author (5 letters).", "a5")}
+          ${renderWheelItem("Master Wordsmith (6 letters).", "a6")}
+          ${renderWheelItem("Shorter ranks use shorter words.", "a7")}
+          ${renderWheelItem("Higher ranks use longer words — and a little more patience.", "a8")}
+          ${renderWheelItem("You have a limited number of guesses in each game.", "a9")}
+          ${renderWheelItem("Each guess brings you closer.", "a10")}
+          ${renderWheelItem("Every game is saved automatically.", "a11")}
+          ${renderWheelItem("The calendar remembers the days you played.", "a12")}
+          ${renderWheelItem("Stats show how you’re improving.", "a13")}
         </div>
       </div>
     </div>
@@ -475,13 +486,18 @@ function renderHowToPlay() {
       <div class="page-title section">How to Play</div>
       <div class="wheel small" id="howto-wheel" data-focus="${uiLocal.howTo.focusedId}">
         <div class="wheel-track vertical">
-          ${renderWheelItem("Choose a rank, then try to guess the secret word.", "h1")}
-          ${renderWheelItem("Pupil is 3 letters, Scribe is 4.", "h2")}
-          ${renderWheelItem("Author is 5 letters, Wordsmith is 6.", "h3")}
-          ${renderWheelItem("Green => right letter, right spot.", "h4")}
-          ${renderWheelItem("Yellow => right letter, wrong spot.", "h5")}
-          ${renderWheelItem("Gray => not in the word.", "h6")}
-          ${renderWheelItem("Good luck!", "h7")}
+          ${renderWheelItem("Choose a rank. A secret word is waiting.", "h1")}
+          ${renderWheelItem("Type a word with the same number of letters. Press Submit.", "h2")}
+          ${renderWheelItem("You have a limited number of guesses — use them wisely.", "h3")}
+          ${renderWheelItem("After each guess, the tiles will guide you.", "h4")}
+          ${renderWheelItem("A green tile means the letter is correct and in the right spot.", "h5")}
+          ${renderWheelItem("A yellow tile means the letter is in the word, but in a different spot.", "h6")}
+          ${renderWheelItem("A gray tile means the letter is not in the word at all.", "h7")}
+          ${renderWheelItem("Letters can appear more than once.", "h8")}
+          ${renderWheelItem("Every guess must be a real word.", "h9")}
+          ${renderWheelItem("Think. Adjust. Try again.", "h10")}
+          ${renderWheelItem("Find the word before you run out of guesses.", "h11")}
+          ${renderWheelItem("Ready?", "h12")}
         </div>
       </div>
     </div>
@@ -779,6 +795,7 @@ function initWheel(
     focusFraction,
     rowHeight,
     itemWidth,
+    edgePadding = 0,
     onFocus,
     onSelect,
     initialScroll,
@@ -800,14 +817,14 @@ function initWheel(
         const focusX = containerRect.width * focusFraction;
         const leading = Math.max(focusX - (itemWidth ?? 170) / 2, 0);
         const trailing = Math.max(containerRect.width - focusX - (itemWidth ?? 170) / 2, 0);
-        track.style.paddingLeft = `${leading}px`;
-        track.style.paddingRight = `${trailing}px`;
+        track.style.paddingLeft = `${leading + edgePadding}px`;
+        track.style.paddingRight = `${trailing + edgePadding}px`;
       } else {
         const focusY = containerRect.height * focusFraction;
         const topPad = Math.max(focusY - rowHeight / 2, 0);
         const bottomPad = Math.max(containerRect.height - focusY - rowHeight / 2, 0);
-        track.style.paddingTop = `${topPad}px`;
-        track.style.paddingBottom = `${bottomPad}px`;
+        track.style.paddingTop = `${topPad + edgePadding}px`;
+        track.style.paddingBottom = `${bottomPad + edgePadding}px`;
       }
     }
     const focusPoint = axis === "x"
