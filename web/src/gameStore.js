@@ -176,10 +176,13 @@ export function createGameStore(baseUrl) {
       storage.setSeed(store.randomSeed);
       store.answerIndex = 0;
       storage.clearAnswerIndices(GameModes.map((mode) => mode.id));
+      GameModes.forEach((mode) => storage.clearCurrentGame(mode.id));
+      store.state.resumeModes = [];
+      store.state.showResume = false;
+      store.state.sessionResumeMode = null;
       store.answerSequence = store.shuffledAnswers();
       store.startNewGame({ clearMessage: true });
       store.state.ui.message = "Fully reset!";
-      storage.clearCurrentGame(store.state.currentMode);
       store.refreshResumeModes();
       store.notify();
     },
