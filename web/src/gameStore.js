@@ -57,7 +57,9 @@ export function createGameStore(baseUrl) {
 
     async setMode(modeId, { startGame = true } = {}) {
       const previousMode = store.state.currentMode;
-      store.persistCurrentGame(previousMode);
+      if (previousMode && previousMode !== modeId) {
+        store.persistCurrentGame(previousMode);
+      }
       const mode = GameModes.find((item) => item.id === modeId) ?? GameModes[0];
       store.state.currentMode = mode.id;
       storage.setMode(mode.id);
