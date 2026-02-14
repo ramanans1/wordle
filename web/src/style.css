@@ -256,6 +256,32 @@ button {
   height: 220px;
 }
 
+.wheel-shell {
+  position: relative;
+  width: min(320px, 90vw);
+}
+
+.wheel-shell::before,
+.wheel-shell::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0));
+}
+
+.wheel-shell::before {
+  top: 0;
+}
+
+.wheel-shell::after {
+  bottom: 0;
+  transform: rotate(180deg);
+}
+
 .mode-wheel .wheel-item {
   min-width: 170px;
   height: 140px;
