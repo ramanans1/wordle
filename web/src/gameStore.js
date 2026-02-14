@@ -140,6 +140,7 @@ export function createGameStore(baseUrl) {
         const entry = createHistoryEntry(store.answer, status === GameStatus.won, updatedGuesses, store.state.currentMode);
         store.state.history = [entry, ...store.state.history];
         storage.setHistory(store.state.history);
+        storage.clearCurrentGame(store.state.currentMode);
       }
 
       store.notify();
@@ -257,11 +258,15 @@ export function createGameStore(baseUrl) {
       GameModes.forEach((mode) => {
         const persisted = storage.getCurrentGame(mode.id);
         if (!persisted) return;
+        const hasGuesses = Array.isArray(persisted.guesses) && persisted.guesses.length > 0;
+        const hasInput = typeof persisted.currentInput === "string" && persisted.currentInput.length > 0;
         const isActive = typeof persisted.isActive === "boolean"
           ? persisted.isActive
-          : persisted.status === GameStatus.inProgress;
+          : persisted.status === GameStatus.inProgress || hasGuesses || hasInput;
         if (isActive) {
           activeModes.push({ id: mode.id, updatedAt: persisted.updatedAt ?? 0 });
+        } else {
+          storage.clearCurrentGame(mode.id);
         }
       });
       store.state.resumeModes = activeModes.map((mode) => mode.id);
@@ -295,7 +300,11 @@ export function createGameStore(baseUrl) {
 
 function restorePersistedGame(store, persisted) {
   if (!persisted || typeof persisted !== "object") return false;
-  const isActive = typeof persisted.isActive === "boolean" ? persisted.isActive : persisted.status === GameStatus.inProgress;
+  const hasGuesses = Array.isArray(persisted.guesses) && persisted.guesses.length > 0;
+  const hasInput = typeof persisted.currentInput === "string" && persisted.currentInput.length > 0;
+  const isActive = typeof persisted.isActive === "boolean"
+    ? persisted.isActive
+    : persisted.status === GameStatus.inProgress || hasGuesses || hasInput;
   if (!isActive) return false;
   if (typeof persisted.answer !== "string" || !persisted.answer.length) return false;
   if (persisted.wordLength !== store.state.ui.wordLength) return false;

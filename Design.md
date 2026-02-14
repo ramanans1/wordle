@@ -373,7 +373,7 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 - Mode defaults to `mini` if missing or invalid.
 - Legacy history entries missing `mode` are defaulted to `classic`.
 - Active game snapshots include answer, guesses, current input, status, and mode settings.
-- Restore only resumes in‑progress games; completed games do not show resume UI.
+- Restore resumes in‑progress games. Snapshots with guesses/input but missing status are treated as active.
 - Resume UI is session‑scoped: it appears only after a keystroke in the current session.
 
 ## D. Word Lists and Filtering
