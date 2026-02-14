@@ -1,65 +1,84 @@
-# Python Wordle
+# My Wordle
 
-Simple Wordle clone served by a lightweight Python HTTP server with a static web UI.
+An offline-first, kid-friendly Wordle-inspired game with four ranks (3–6 letters), designed for short sessions and steady progression. The project includes a polished web app (Vite + vanilla JS) and native iOS/Android builds that share the same curated word lists and gameplay rules.
 
-## Getting started
+## Vision (Today)
+
+- **Kid-friendly**: shorter words, clear rank progression, and gentle pacing.
+- **Offline-first**: everything runs locally (no backend required).
+- **Deterministic**: per‑mode word sequences for consistent daily play and history.
+- **Multi-platform**: web, iOS, and Android share the same game logic and word lists.
+
+## Status
+
+- Web app is the primary, most up-to-date experience.
+- iOS and Android apps are offline and mirror the core gameplay.
+- Word lists are curated and generated via `scripts/generate_kid_friendly_wordlists.py`.
+
+## Quick Start (Web)
 
 ```bash
-cd /workspace/wordle
-python server.py
+cd web
+npm install
+npm run dev
 ```
 
-Then open http://localhost:8000 in a browser. The UI uses `/api/new-game` to start a session and `/api/guess` to submit guesses. Game state is kept in-memory per browser session via a cookie.
+Then open the local URL shown by Vite.
 
-## Notes
+Build for production:
 
-- Supports **3, 4, 5, and 6-letter** game modes (selected in the UI before starting a new game).
-- Six attempts per game. Colors match the classic Wordle rules: green = correct spot, yellow = present, gray = absent.
-- On startup, `server.py` loads generated lists for 3/4/6 from `wordlist/allowed-guesses-<N>.txt` and `wordlist/allowed-answers-<N>.txt`.
-- 5-letter mode keeps the existing list behavior and continues to use legacy files (`allowed-guesses.txt` / `allowed-answers.txt`) when available.
-- No external dependencies are required beyond the Python standard library.
+```bash
+cd web
+npm run build
+npm run preview
+```
 
-## Word list generation (kid-friendly)
+## iOS (Offline)
 
-Generated lists are produced by `scripts/generate_kid_friendly_wordlists.py`.
+```bash
+cd ios/Wordle
+xcodegen
+open Wordle.xcodeproj
+```
 
-Data sources used:
-- `dwyl/english-words` (dictionary corpus)
-- `dolph/dictionary` `enable1.txt` (Scrabble-style legal words)
-- `hermitdave/FrequencyWords` (`en_50k`) for modern usage ranking
-- Profanity sources:
-  - `LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words`
-  - `zacanger/profane-words`
+Requirements:
+- Xcode 15+
+- XcodeGen
 
-Filtering summary:
-- Keep lowercase alphabetic words only.
-- Build union candidates from dictionary + frequency sources.
-- Remove profanity/adult terms and some substance/relationship terms using merged blocklists plus custom additions.
-- Remove selected archaic forms (`thou`, `hath`, etc.), common abbreviations/acronyms (e.g., `fbi`, `dna`), interjections (`aah`, `hmm`, etc.), and simple archaic suffix patterns (`-eth`, `-est`).
-- Remove personal names using public first-name/surname lists, then create broader **guesses** and stricter **answers** by frequency thresholds.
-- Guarantee `answers ⊆ guesses` for each generated word length (3/4/6).
+## Android (Offline)
 
-Regenerate:
+```bash
+cd android
+./gradlew assembleDebug
+```
+
+Then install `app/build/outputs/apk/debug/app-debug.apk` on a device/emulator.
+
+## Word Lists
+
+Word lists are generated with:
 
 ```bash
 python scripts/generate_kid_friendly_wordlists.py
 ```
 
-## Android app (offline)
+Generated lists live in:
+- `wordlist/` (source lists used by some tooling)
+- `web/public/wordlist/` (web app)
+- `ios/Wordle/Wordle/Resources/` (iOS app)
+- `android/app/src/main/assets/` (Android app)
 
-- Project files live under `android/` and use Jetpack Compose with no network dependency. The same curated word list is packaged as an app asset.
-- To run:
-  1. Open `android/` in Android Studio (Giraffe or newer). When prompted, let it download the matching Gradle and Android plugins.
-  2. Connect an Android device with USB debugging enabled (or start an emulator).
-  3. Select the `app` run configuration and press **Run**. The game works entirely offline.
-- To build from the command line: `cd android && ./gradlew assembleDebug` then install `app/build/outputs/apk/debug/app-debug.apk` on your device via `adb install -r app-debug.apk`.
+## Project Structure
 
-## iOS app (offline)
+- `web/` – Vite + vanilla JS web app
+- `ios/` – SwiftUI iOS app
+- `android/` – Jetpack Compose Android app
+- `scripts/` – tooling (word list generation, deploy helpers)
+- `Design.md` – system design and current behavior (kept in sync)
 
-- iOS project sources live under `ios/Wordle/Wordle` and mirror the Android app's features and styling (home, game, history calendar, statistics, reset flow, splash, and local word-list gameplay).
-- The iOS app bundles `allowed-answers.txt` and `allowed-guesses.txt` in `ios/Wordle/Wordle/Resources` for fully offline gameplay.
-- To run in Xcode:
-  1. Install Xcode 15+.
-  2. Install [XcodeGen](https://github.com/yonaskolb/XcodeGen) if not already installed.
-  3. Generate the project: `cd ios/Wordle && xcodegen`.
-  4. Open `Wordle.xcodeproj`, choose an iOS simulator/device, and run.
+## Notes
+
+- Game state is persisted locally (history, last mode, and in‑progress games).
+- The web app uses the curated lists and supports 3/4/5/6 letter modes.
+
+If you want to contribute or extend the game, start with `Design.md` and the `web/` app.
