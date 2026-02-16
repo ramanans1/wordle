@@ -283,7 +283,7 @@ function renderKeyboard(state, isLarge = false) {
     <div class="keyboard ${isLarge ? "large" : ""}">
       ${keys}
       <div class="keyboard-row">
-        ${renderKey("⌫", LetterState.unused, "wide", "delete")}
+        ${renderKey("Delete", LetterState.unused, "extra", "delete")}
         ${renderKey("Submit", LetterState.unused, "extra", "submit")}
       </div>
     </div>

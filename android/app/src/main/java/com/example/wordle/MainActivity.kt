@@ -1090,7 +1090,7 @@ fun Keyboard(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Key(label = "⌫", state = LetterState.UNUSED, onClick = { onDelete() }, isWide = true)
+            Key(label = "Delete", state = LetterState.UNUSED, onClick = { onDelete() }, isWide = true)
         }
     }
 }
@@ -1108,7 +1108,7 @@ fun Key(label: String, state: LetterState, onClick: (() -> Unit)? = null, isWide
         LetterState.ABSENT -> Color(0xFFE5E7EB)
         else -> Color(0xFF0F172A)
     }
-    val width = if (isWide) 56.dp else 28.dp
+    val width = if (isWide) 88.dp else 28.dp
     Box(
         modifier = Modifier
             .width(width)

@@ -383,7 +383,7 @@ struct KeyboardView: View {
                 }
             }
             HStack(spacing: 6) {
-                KeyView(label: "⌫", state: .unused, width: 56, action: onDelete)
+                KeyView(label: "Delete", state: .unused, width: 88, action: onDelete)
                 KeyView(label: "Submit", state: .unused, width: 88, action: onSubmit)
             }
         }
