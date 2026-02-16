@@ -75,6 +75,7 @@ This document covers architecture, UI, game logic, state, persistence, assets, a
   - `allowed-answers-3.txt`, `allowed-guesses-3.txt`.
   - `allowed-answers-4.txt`, `allowed-guesses-4.txt`.
   - `allowed-answers-6.txt`, `allowed-guesses-6.txt`.
+- Generated from `scripts/generate_kid_friendly_wordlists.py` with canonical outputs in `wordlist/`, then synced into iOS resources.
 
 **Filtering rules**
 - Words are trimmed, lowercased, alphabetic only, and length-matched to the active mode.
@@ -379,12 +380,19 @@ This section documents the shipped vanilla + Vite web app that mirrors the iOS b
 ## D. Word Lists and Filtering
 
 **Source**
-- `web/public/wordlist/` mirrors iOS resource file names.
+- `wordlist/` is the canonical source of generated lists.
+- `web/public/wordlist/` mirrors canonical file names via generator sync.
+- `ios/Wordle/Wordle/Resources/` is synced from the same canonical source.
 
 **Rules**
 - Lowercase, trim, alpha only, length‑match per mode.
 - `blockedAnswers` are removed from both guesses and answers.
 - Fallback words are used per mode when lists are unavailable.
+- Generator behavior (`scripts/generate_kid_friendly_wordlists.py`):
+  - Processes 3/4/5/6 letter lengths.
+  - Expands guess pools aggressively from local dictionaries and curated lists.
+  - Preserves existing answer lists by default unless `--regenerate-answers` is passed.
+  - Applies kid-friendly filtering (`CUSTOM_BLOCK`, abbreviation/interjection/archaic filters, name filtering).
 
 **Loading**
 - `loadWordLists()` fetches `wordlist/<name>.txt` via `BASE_URL`.

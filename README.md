@@ -59,14 +59,25 @@ Then install `app/build/outputs/apk/debug/app-debug.apk` on a device/emulator.
 Word lists are generated with:
 
 ```bash
-python scripts/generate_kid_friendly_wordlists.py
+python3 scripts/generate_kid_friendly_wordlists.py
 ```
 
-Generated lists live in:
+Default behavior:
+- Expands **allowed guesses** for 3/4/5/6-letter modes.
+- Preserves existing `allowed-answers*.txt` files (no answer churn).
+- Applies kid-friendly filtering rules from `scripts/generate_kid_friendly_wordlists.py`.
+- Syncs generated files into web and iOS resource folders automatically.
+
+Optional flags:
+- `--regenerate-answers` to regenerate answer lists from source data.
+- `--no-sync` to write only to `wordlist/`.
+- `--lengths 3,4,5,6` to control processed lengths.
+
+Canonical and synced list locations:
 - `wordlist/` (source lists used by some tooling)
 - `web/public/wordlist/` (web app)
 - `ios/Wordle/Wordle/Resources/` (iOS app)
-- `android/app/src/main/assets/` (Android app)
+- Android reads from `wordlist/` directly via Gradle `sourceSets` (`android/app/build.gradle`).
 
 ## Project Structure
 
